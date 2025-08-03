@@ -310,7 +310,7 @@ check_config() {
     echo -e "${info}${plain}"
     echo ""
     
-        # 获取 IPv4 和 IPv6 地址
+    # 获取 IPv4 和 IPv6 地址
     v4=$(curl -s4m8 http://ip.sb -k)
     v6=$(curl -s6m8 http://ip.sb -k)
     local existing_webBasePath=$(/usr/local/x-ui/x-ui setting -show true | grep -Eo 'webBasePath（访问路径）: .+' | awk '{print $2}') 
@@ -332,19 +332,19 @@ check_config() {
 
         # 检查 IP 并输出相应的 SSH 和浏览器访问信息
         if [[ -z $v4 ]]; then
-            echo -e "${green}1、本地电脑客户端转发${plain} ${blue}ssh  -L [::]:15208:127.0.0.1:${existing_port} root@[$v6]$ {plain} 请输入服务器用〔root密码〕进行转发"
+            echo -e "${green}1、本地电脑客户端转发${plain} ${blue}ssh  -L [::]:15208:127.0.0.1:${existing_port} root@[$v6] ${plain}请输入服务器用〔root密码〕进行转发"
             echo ""
             echo -e "${green}2、请在浏览器地址栏复制${plain} ${blue}[::1]:15208${existing_webBasePath}${plain} ${green}进入 3X-UI 登录界面"
             echo ""
             echo -e "${red}注意：若不使用〔ssh转发〕请为3X-UI面板配置安装证书再行登录管理后台${plain}"
         elif [[ -n $v4 && -n $v6 ]]; then
-            echo -e "${green}1、本地电脑客户端转发${plain} ${blue}ssh -L 15208:127.0.0.1:${existing_port} root@$v4${plain} ${yellow}或者 ${blue}ssh  -L [::]:15208:127.0.0.1:${existing_port} root@[$v6]$ {plain} 请输入服务器用〔root密码〕进行转发"
+            echo -e "${green}1、本地电脑客户端转发${plain} ${blue}ssh -L 15208:127.0.0.1:${existing_port} root@$v4${plain} ${yellow}或者 ${blue}ssh  -L [::]:15208:127.0.0.1:${existing_port} root@[$v6] ${plain}请输入服务器用〔root密码〕进行转发"
             echo ""
             echo -e "${green}2、请在浏览器地址栏复制${plain} ${blue}127.0.0.1:15208${existing_webBasePath}${plain} ${yellow}或者${plain} ${blue}[::1]:15208${existing_webBasePath}${plain} ${green}进入 3X-UI 登录界面"
             echo ""
             echo -e "${red}注意：若不使用〔ssh转发〕请为3X-UI面板配置安装证书再行登录管理后台${plain}"
         else
-            echo -e "${green}1、本地电脑客户端转发${plain} ${blue}ssh -L 15208:127.0.0.1:${existing_port} root@$v4$ {plain} 请输入服务器用〔root密码〕进行转发"
+            echo -e "${green}1、本地电脑客户端转发${plain} ${blue}ssh -L 15208:127.0.0.1:${existing_port} root@$v4 ${plain}请输入服务器用〔root密码〕进行转发"
             echo ""
             echo -e "${green}2、请在浏览器地址栏复制${plain} ${blue}127.0.0.1:15208${existing_webBasePath}${plain} ${green}进入 3X-UI 登录界面"
             echo ""
