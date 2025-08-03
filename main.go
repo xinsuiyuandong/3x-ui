@@ -6,8 +6,8 @@ import (
 	"log"
 	"os"
 	"os/signal"
-                 "os/exec"
-                 "strings"
+//	"os/exec"
+//	"strings"
 	"syscall"
 	_ "unsafe"
 
