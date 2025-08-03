@@ -131,22 +131,22 @@ func resetSetting() {
 
 func showSetting(show bool) {
 	// 执行 shell 命令获取 IPv4 地址
-        cmdIPv4 := exec.Command("sh", "-c", "curl -s4m8 ip.p3terx.com -k | sed -n 1p")
-        outputIPv4, err := cmdIPv4.Output()
-        if err != nil {
-        log.Fatal(err)
-    }
+   //   cmdIPv4 := exec.Command("sh", "-c", "curl -s4m8 ip.p3terx.com -k | sed -n 1p")
+  //    outputIPv4, err := cmdIPv4.Output()
+  //    if err != nil {
+  //     log.Fatal(err)
+  //  }
 
     // 执行 shell 命令获取 IPv6 地址
-        cmdIPv6 := exec.Command("sh", "-c", "curl -s6m8 ip.p3terx.com -k | sed -n 1p")
-        outputIPv6, err := cmdIPv6.Output()
-        if err != nil {
-        log.Fatal(err)
-    }
+   //     cmdIPv6 := exec.Command("sh", "-c", "curl -s6m8 ip.p3terx.com -k | sed -n 1p")
+   //     outputIPv6, err := cmdIPv6.Output()
+   //     if err != nil {
+   //     log.Fatal(err)
+  //  }
 
     // 去除命令输出中的换行符
-    ipv4 := strings.TrimSpace(string(outputIPv4))
-    ipv6 := strings.TrimSpace(string(outputIPv6))
+//    ipv4 := strings.TrimSpace(string(outputIPv4))
+//    ipv6 := strings.TrimSpace(string(outputIPv6))
     // 定义转义字符，定义不同颜色的转义字符
 	const (
 		Reset      = "\033[0m"
