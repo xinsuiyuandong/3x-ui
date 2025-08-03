@@ -212,32 +212,32 @@ func showSetting(show bool) {
 	                 fmt.Println("")
 		fmt.Println("--------------------------------------------------")
   // 根据条件打印带颜色的字符串
-        if ipv4 != "" {
-		fmt.Println("")
-		formattedIPv4 := fmt.Sprintf("%s %s%s:%d%s" + Reset,
-			Green+"面板 IPv4 访问地址------>>",
-		  	Yellow+"http://",
-			ipv4,
-			port,
-			Yellow+webBasePath + Reset)
-		fmt.Println(formattedIPv4)
-		fmt.Println("")
-	}
+ //     if ipv4 != "" {
+ // 		fmt.Println("")
+ // 		formattedIPv4 := fmt.Sprintf("%s %s%s:%d%s" + Reset,
+ // 			Green+"面板 IPv4 访问地址------>>",
+ // 		  	Yellow+"http://",
+ // 			ipv4,
+ // 			port,
+ // 			Yellow+webBasePath + Reset)
+ // 		fmt.Println(formattedIPv4)
+ // 		fmt.Println("")
+ // 	}
 
-	if ipv6 != "" {
-		fmt.Println("")
-		formattedIPv6 := fmt.Sprintf("%s %s[%s%s%s]:%d%s%s",
-	        	Green+"面板 IPv6 访问地址------>>", // 绿色的提示信息
-		        Yellow+"http://",                 // 黄色的 http:// 部分
-		        Yellow,                           // 黄色的[ 左方括号
-		        ipv6,                             // IPv6 地址
-		        Yellow,                           // 黄色的] 右方括号
-		        port,                             // 端口号
-	        	Yellow+webBasePath,               // 黄色的 Web 基础路径
-	         	Reset)                            // 重置颜色
-		fmt.Println(formattedIPv6)
-		fmt.Println("")
-	}
+ // 	if ipv6 != "" {
+ // 		fmt.Println("")
+ // 		formattedIPv6 := fmt.Sprintf("%s %s[%s%s%s]:%d%s%s",
+ // 	        	Green+"面板 IPv6 访问地址------>>", // 绿色的提示信息
+ // 		        Yellow+"http://",                 // 黄色的 http:// 部分
+ // 		        Yellow,                           // 黄色的[ 左方括号
+ // 		        ipv6,                             // IPv6 地址
+ // 		        Yellow,                           // 黄色的] 右方括号
+ // 		        port,                             // 端口号
+ // 	        	Yellow+webBasePath,               // 黄色的 Web 基础路径
+ // 	         	Reset)                            // 重置颜色
+ // 		fmt.Println(formattedIPv6)
+ // 		fmt.Println("")
+ // 	}
 	fmt.Println(Green + ">>>>>>>>注：若您安装了〔证书〕，请把IP换成您的域名用https方式登录" + Reset)
 	fmt.Println("")
 	fmt.Println("--------------------------------------------------")
