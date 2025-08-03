@@ -200,9 +200,9 @@ config_after_install() {
         echo -e "${red}--------------->>>>Cancel...--------------->>>>>>>取消修改...${plain}"
         echo ""
         if [[ ! -f "/etc/x-ui/x-ui.db" ]]; then
-            local usernameTemp=$(head -c 6 /dev/urandom | base64)
-            local passwordTemp=$(head -c 6 /dev/urandom | base64)
-            local webBasePathTemp=$(gen_random_string 10)
+            local usernameTemp=$(head -c 10 /dev/urandom | base64)
+            local passwordTemp=$(head -c 10 /dev/urandom | base64)
+            local webBasePathTemp=$(gen_random_string 15)
             /usr/local/x-ui/x-ui setting -username ${usernameTemp} -password ${passwordTemp} -webBasePath ${webBasePathTemp}
             echo ""
             echo -e "${yellow}检测到为全新安装，出于安全考虑将生成随机登录信息:${plain}"
@@ -331,19 +331,19 @@ ssh_forwarding() {
 
         # 检查 IP 并输出相应的 SSH 和浏览器访问信息
         if [[ -z $v4 ]]; then
-            echo -e "${green}1、本地电脑客户端转发${plain} ${blue}ssh  -L [::]:15208:127.0.0.1:${existing_port} root@[$v6]$ {plain} 请输入服务器用〔root密码〕进行转发"
+            echo -e "${green}1、本地电脑客户端转发${plain} ${blue}ssh  -L [::]:15208:127.0.0.1:${existing_port} root@[$v6] ${plain}请输入服务器用〔root密码〕进行转发"
             echo ""
             echo -e "${green}2、请在浏览器地址栏复制${plain} ${blue}[::1]:15208${existing_webBasePath}${plain} ${green}进入 3X-UI 登录界面"
             echo ""
             echo -e "${red}注意：若不使用〔ssh转发〕请为3X-UI面板配置安装证书再行登录管理后台${plain}"
         elif [[ -n $v4 && -n $v6 ]]; then
-            echo -e "${green}1、本地电脑客户端转发${plain} ${blue}ssh -L 15208:127.0.0.1:${existing_port} root@$v4${plain} ${yellow}或者 ${blue}ssh  -L [::]:15208:127.0.0.1:${existing_port} root@[$v6]$ {plain} 请输入服务器用〔root密码〕进行转发"
+            echo -e "${green}1、本地电脑客户端转发${plain} ${blue}ssh -L 15208:127.0.0.1:${existing_port} root@$v4${plain} ${yellow}或者 ${blue}ssh  -L [::]:15208:127.0.0.1:${existing_port} root@[$v6] ${plain}请输入服务器用〔root密码〕进行转发"
             echo ""
             echo -e "${green}2、请在浏览器地址栏复制${plain} ${blue}127.0.0.1:15208${existing_webBasePath}${plain} ${yellow}或者${plain} ${blue}[::1]:15208${existing_webBasePath}${plain} ${green}进入 3X-UI 登录界面"
             echo ""
             echo -e "${red}注意：若不使用〔ssh转发〕请为3X-UI面板配置安装证书再行登录管理后台${plain}"
         else
-            echo -e "${green}1、本地电脑客户端转发${plain} ${blue}ssh -L 15208:127.0.0.1:${existing_port} root@$v4$ {plain} 请输入服务器用〔root密码〕进行转发"
+            echo -e "${green}1、本地电脑客户端转发${plain} ${blue}ssh -L 15208:127.0.0.1:${existing_port} root@$v4 ${plain}请输入服务器用〔root密码〕进行转发"
             echo ""
             echo -e "${green}2、请在浏览器地址栏复制${plain} ${blue}127.0.0.1:15208${existing_webBasePath}${plain} ${green}进入 3X-UI 登录界面"
             echo ""
