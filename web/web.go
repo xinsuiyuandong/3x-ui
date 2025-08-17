@@ -42,6 +42,9 @@ var i18nFS embed.FS
 
 var startTime = time.Now()
 
+// 预定义 IPv4 私网和回环网段
+var privateIPv4Nets []*net.IPNet
+
 type wrapAssetsFS struct {
 	embed.FS
 }
@@ -331,6 +334,12 @@ func (s *Server) Start() (err error) {
 	if err != nil {
 		return err
 	}
+	if certFile == "" || keyFile == "" {
+		// 如果没有证书，强制检查 listen 是否内部 IP，否则回退到本地
+		if !isInternalIP(listen) {
+			listen = fallbackToLocalhost(listen)
+		}
+	}
 	listenAddr := net.JoinHostPort(listen, strconv.Itoa(port))
 	listener, err := net.Listen("tcp", listenAddr)
 	if err != nil {
@@ -399,4 +408,64 @@ func (s *Server) GetCtx() context.Context {
 
 func (s *Server) GetCron() *cron.Cron {
 	return s.cron
+}
+
+// isInternalIP 判断是否为私网或回环IP（支持IPv4和IPv6）
+func isInternalIP(ipStr string) bool {
+	ip := net.ParseIP(ipStr)
+	if ip == nil {
+		return false
+	}
+
+	if ip4 := ip.To4(); ip4 != nil {
+		// IPv4 判断是否在私网/回环网段内
+		for _, privateNet := range privateIPv4Nets {
+			if privateNet.Contains(ip4) {
+				return true
+			}
+		}
+		return false
+	}
+
+	// IPv6 判断回环或链路本地地址
+	if ip.IsLoopback() || ip.IsLinkLocalUnicast() {
+		return true
+	}
+
+	// 判断 IPv6 fc00::/7 私网地址段
+	if ip[0]&0xfe == 0xfc {
+		return true
+	}
+
+	return false
+}
+
+// fallbackToLocalhost 根据传入地址返回对应的本地回环地址
+func fallbackToLocalhost(listen string) string {
+	ip := net.ParseIP(listen)
+	if ip == nil {
+		// 无法解析则默认回退 IPv4 回环
+		return "127.0.0.1"
+	}
+	if ip.To4() != nil {
+		// IPv4 回退 IPv4 回环
+		return "127.0.0.1"
+	}
+	// IPv6 回退 IPv6 回环
+	return "::1"
+}
+
+func init() {
+	for _, cidr := range []string{
+		"10.0.0.0/8",     // A类私网
+		"172.16.0.0/12",  // B类私网
+		"192.168.0.0/16", // C类私网
+		"100.64.0.0/10",  // CGNAT地址段
+		"127.0.0.0/8",    // 回环
+	} {
+		_, netw, err := net.ParseCIDR(cidr)
+		if err == nil {
+			privateIPv4Nets = append(privateIPv4Nets, netw)
+		}
+	}
 }
