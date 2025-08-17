@@ -1681,16 +1681,17 @@ show_menu() {
   ${yellow}https://xinsuiyuandong.blogspot.com/2025/07/3x-ui.html${plain}
 ——————————————————————
 
--------------->>>>>>>赞助推广区<<<<<<<<-------------------
+-------------->>>>>>>赞 助 推 广 区<<<<<<<<-------------------
 
 ${green}1、搬瓦工GIA高端线路：${yellow}https://bandwagonhost.com/aff.php?aff=75015${plain}
+
 ${green}2、Dmit高端GIA线路：${yellow}https://www.dmit.io/aff.php?aff=9326${plain}
+
 ${green}3、白丝云〔4837线路〕实惠量大管饱：${yellow}https://cloudsilk.io/aff.php?aff=706${plain}
+
 ${green}4、RackNerd性价比机器：${yellow}https://my.racknerd.com/aff.php?aff=15268&pid=912${plain}
 
 ----------------------------------------------
-
-
 "
     show_status
     echo && read -p "请输入选项 [0-25]: " num
