@@ -78,32 +78,24 @@
 
         <!-- 步骤二：协议设置 -->
         <div v-if="inbound._step === 1">
-          {{if eq .inbound.protocol "vmess"}}{{template "form/vmess" .}}{{end}}
-          {{if eq .inbound.protocol "vless"}}{{template "form/vless" .}}{{end}}
-          {{if eq .inbound.protocol "trojan"}}{{template "form/trojan" .}}{{end}}
-          {{if eq .inbound.protocol "shadowsocks"}}{{template "form/shadowsocks" .}}{{end}}
-          {{if eq .inbound.protocol "dokodemo"}}{{template "form/dokodemo" .}}{{end}}
-          {{if eq .inbound.protocol "socks"}}{{template "form/socks" .}}{{end}}
-          {{if eq .inbound.protocol "http"}}{{template "form/http" .}}{{end}}
-          {{if eq .inbound.protocol "wireguard"}}{{template "form/wireguard" .}}{{end}}
-
+          <component :is="protocolComponent"></component>
           <a-alert v-if="!inbound.protocol" type="warning" message="请选择协议" show-icon class="mb-16" />
         </div>
 
         <!-- 步骤三：传输/TLS -->
         <div v-if="inbound._step === 2">
           <template v-if="inbound.canEnableStream()">
-            {{template "form/streamSettings" .}}
-            {{template "form/externalProxy" .}}
+            <form-stream-settings></form-stream-settings>
+            <form-external-proxy></form-external-proxy>
           </template>
           <template v-if="inbound.canEnableTls()">
-            {{template "form/tlsSettings" .}}
+            <form-tls-settings></form-tls-settings>
           </template>
         </div>
 
         <!-- 步骤四：嗅探 -->
         <div v-if="inbound._step === 3">
-          {{template "form/sniffing" .}}
+          <form-sniffing></form-sniffing>
         </div>
 
       </div>
@@ -125,59 +117,22 @@
   </a-form>
 </div>
 
-<!-- 动画 CSS -->
 <style scoped>
 /* 左滑入（前进） */
-.slide-left-enter-active {
-  transition: all 0.4s ease;
-}
-.slide-left-leave-active {
-  transition: all 0.4s ease;
-  position: absolute;
-  width: 100%;
-}
-.slide-left-enter-from {
-  transform: translateX(100%);
-  opacity: 0;
-}
-.slide-left-enter-to {
-  transform: translateX(0);
-  opacity: 1;
-}
-.slide-left-leave-from {
-  transform: translateX(0);
-  opacity: 1;
-}
-.slide-left-leave-to {
-  transform: translateX(-100%);
-  opacity: 0;
-}
+.slide-left-enter-active, .slide-left-leave-active { transition: all 0.4s ease; }
+.slide-left-leave-active { position: absolute; width: 100%; }
+.slide-left-enter-from { transform: translateX(100%); opacity: 0; }
+.slide-left-enter-to { transform: translateX(0); opacity: 1; }
+.slide-left-leave-from { transform: translateX(0); opacity: 1; }
+.slide-left-leave-to { transform: translateX(-100%); opacity: 0; }
 
 /* 右滑入（后退） */
-.slide-right-enter-active {
-  transition: all 0.4s ease;
-}
-.slide-right-leave-active {
-  transition: all 0.4s ease;
-  position: absolute;
-  width: 100%;
-}
-.slide-right-enter-from {
-  transform: translateX(-100%);
-  opacity: 0;
-}
-.slide-right-enter-to {
-  transform: translateX(0);
-  opacity: 1;
-}
-.slide-right-leave-from {
-  transform: translateX(0);
-  opacity: 1;
-}
-.slide-right-leave-to {
-  transform: translateX(100%);
-  opacity: 0;
-}
+.slide-right-enter-active, .slide-right-leave-active { transition: all 0.4s ease; }
+.slide-right-leave-active { position: absolute; width: 100%; }
+.slide-right-enter-from { transform: translateX(-100%); opacity: 0; }
+.slide-right-enter-to { transform: translateX(0); opacity: 1; }
+.slide-right-leave-from { transform: translateX(0); opacity: 1; }
+.slide-right-leave-to { transform: translateX(100%); opacity: 0; }
 </style>
 
 <script>
@@ -185,7 +140,11 @@ export default {
   data() {
     return {
       lastStep: 0,
-      transitionName: 'slide-right'
+      transitionName: 'slide-right',
+      steps: ["基础设置","协议设置","传输/TLS","嗅探"],
+      protocols: ["vmess","vless","trojan","shadowsocks","dokodemo","socks","http","wireguard"],
+      inbound: { _step: 0, protocol: '' },
+      dbInbound: { enable: true, remark: '', listen: '', port: null, totalGB: 0, _expiryTime: null }
     }
   },
   watch: {
@@ -194,16 +153,20 @@ export default {
       this.lastStep = oldStep;
     }
   },
-  created() {
-    if (!this.inbound) this.$set(this, 'inbound', { _step: 0, protocol: '' });
-    else if (this.inbound._step === undefined) this.$set(this.inbound, '_step', 0);
-
-    if (!this.dbInbound) this.$set(this, 'dbInbound', { enable: true, remark: '', listen: '', port: null, totalGB: 0, _expiryTime: null });
-
-    if (!this.protocols) this.protocols = ["vmess","vless","trojan","shadowsocks","dokodemo","socks","http","wireguard"];
-
-    this.steps = ["基础设置","协议设置","传输/TLS","嗅探"];
-    this.lastStep = this.inbound._step;
+  computed: {
+    protocolComponent() {
+      switch(this.inbound.protocol) {
+        case 'vmess': return 'form-vmess';
+        case 'vless': return 'form-vless';
+        case 'trojan': return 'form-trojan';
+        case 'shadowsocks': return 'form-shadowsocks';
+        case 'dokodemo': return 'form-dokodemo';
+        case 'socks': return 'form-socks';
+        case 'http': return 'form-http';
+        case 'wireguard': return 'form-wireguard';
+        default: return null;
+      }
+    }
   }
 }
 </script>
