@@ -10,8 +10,8 @@
       <a-step title="嗅探" />
     </a-steps>
 
-    <!-- 进度条 -->
-    <a-progress :percent="Math.round(((inbound._step+1)/4)*100)" show-info style="margin-bottom: 20px;" />
+    <!-- 进度条（动态计算百分比） -->
+    <a-progress :percent="Math.round(((inbound._step+1)/steps.length)*100)" show-info style="margin-bottom: 20px;" />
 
     <!-- 步骤内容 -->
     <transition name="fade-slide" mode="out-in">
@@ -75,28 +75,34 @@
           </a-form-item>
         </div>
 
-        <!-- 步骤二：协议设置 -->
+        <!-- 步骤二：协议设置（改为 Go 模板 if 判断） -->
         <div v-if="inbound._step === 1">
-          <template v-if="inbound.protocol && protocolTemplates[inbound.protocol]">
-            {{template protocolTemplates[inbound.protocol]}}
-          </template>
-          <a-alert v-else type="warning" message="请选择协议" show-icon class="mb-16" />
+          {{if eq .inbound.protocol "vmess"}}{{template "form/vmess" .}}{{end}}
+          {{if eq .inbound.protocol "vless"}}{{template "form/vless" .}}{{end}}
+          {{if eq .inbound.protocol "trojan"}}{{template "form/trojan" .}}{{end}}
+          {{if eq .inbound.protocol "shadowsocks"}}{{template "form/shadowsocks" .}}{{end}}
+          {{if eq .inbound.protocol "dokodemo"}}{{template "form/dokodemo" .}}{{end}}
+          {{if eq .inbound.protocol "socks"}}{{template "form/socks" .}}{{end}}
+          {{if eq .inbound.protocol "http"}}{{template "form/http" .}}{{end}}
+          {{if eq .inbound.protocol "wireguard"}}{{template "form/wireguard" .}}{{end}}
+
+          <a-alert v-if="!inbound.protocol" type="warning" message="请选择协议" show-icon class="mb-16" />
         </div>
 
         <!-- 步骤三：传输/TLS -->
         <div v-if="inbound._step === 2">
           <template v-if="inbound.canEnableStream()">
-            {{template "form/streamSettings"}}
-            {{template "form/externalProxy"}}
+            {{template "form/streamSettings" .}}
+            {{template "form/externalProxy" .}}
           </template>
           <template v-if="inbound.canEnableTls()">
-            {{template "form/tlsSettings"}}
+            {{template "form/tlsSettings" .}}
           </template>
         </div>
 
         <!-- 步骤四：嗅探 -->
         <div v-if="inbound._step === 3">
-          {{template "form/sniffing"}}
+          {{template "form/sniffing" .}}
         </div>
 
       </div>
@@ -104,13 +110,13 @@
 
     <!-- 步骤按钮 -->
     <div style="margin-top: 20px; text-align: right;">
-      <a-button v-if="inbound._step > 0" @click="inbound._step--" style="margin-right: 8px;">
+      <a-button :disabled="inbound._step === 0" @click="inbound._step--" style="margin-right: 8px;">
         上一步
       </a-button>
-      <a-button type="primary" v-if="inbound._step < 3" @click="inbound._step++">
+      <a-button type="primary" :disabled="inbound._step === steps.length-1" v-if="inbound._step < steps.length-1" @click="inbound._step++">
         下一步
       </a-button>
-      <a-button type="primary" v-if="inbound._step === 3" @click="$emit('ok')">
+      <a-button type="primary" v-if="inbound._step === steps.length-1" @click="$emit('ok', dbInbound)">
         完成
       </a-button>
     </div>
@@ -150,16 +156,8 @@ export default {
       this.protocols = ["vmess","vless","trojan","shadowsocks","dokodemo","socks","http","wireguard"];
     }
 
-    this.protocolTemplates = {
-      vmess: "form/vmess",
-      vless: "form/vless",
-      trojan: "form/trojan",
-      shadowsocks: "form/shadowsocks",
-      dokodemo: "form/dokodemo",
-      socks: "form/socks",
-      http: "form/http",
-      wireguard: "form/wireguard"
-    };
+    // 动态步骤数组
+    this.steps = ["基础设置","协议设置","传输/TLS","嗅探"];
   }
 }
 </script>
