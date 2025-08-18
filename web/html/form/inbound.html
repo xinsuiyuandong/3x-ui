@@ -1,5 +1,6 @@
 {{define "form/inbound"}}
-<div v-if="inbound && dbInbound && protocols">
+<div v-if="inbound && dbInbound && protocols" style="position: relative;">
+
   <a-form :model="dbInbound" layout="vertical">
 
     <!-- 步骤条 -->
@@ -10,12 +11,12 @@
       <a-step title="嗅探" />
     </a-steps>
 
-    <!-- 进度条（动态计算百分比） -->
+    <!-- 进度条 -->
     <a-progress :percent="Math.round(((inbound._step+1)/steps.length)*100)" show-info style="margin-bottom: 20px;" />
 
     <!-- 步骤内容 -->
-    <transition name="fade-slide" mode="out-in">
-      <div :key="inbound._step" style="min-height: 200px; padding: 8px 0;">
+    <transition :name="transitionName" mode="out-in">
+      <div :key="inbound._step" style="min-height: 200px; padding: 8px 0; position: relative;">
 
         <!-- 步骤一：基础设置 -->
         <div v-if="inbound._step === 0">
@@ -29,7 +30,7 @@
 
           <a-form-item :label="i18n('inbound.protocol')">
             <a-select v-model:value="inbound.protocol" style="width: 200px">
-              <a-select-option v-for="p in protocols" :key="p" :value="p">{{p}}</a-select-option>
+              <a-select-option v-for="p in protocols" :key="p" :value="p" v-text="p"></a-select-option>
             </a-select>
           </a-form-item>
 
@@ -75,7 +76,7 @@
           </a-form-item>
         </div>
 
-        <!-- 步骤二：协议设置（改为 Go 模板 if 判断） -->
+        <!-- 步骤二：协议设置 -->
         <div v-if="inbound._step === 1">
           {{if eq .inbound.protocol "vmess"}}{{template "form/vmess" .}}{{end}}
           {{if eq .inbound.protocol "vless"}}{{template "form/vless" .}}{{end}}
@@ -126,38 +127,83 @@
 
 <!-- 动画 CSS -->
 <style scoped>
-.fade-slide-enter-active, .fade-slide-leave-active {
+/* 左滑入（前进） */
+.slide-left-enter-active {
   transition: all 0.4s ease;
 }
-.fade-slide-enter-from, .fade-slide-leave-to {
-  opacity: 0;
-  transform: translateX(20px);
+.slide-left-leave-active {
+  transition: all 0.4s ease;
+  position: absolute;
+  width: 100%;
 }
-.fade-slide-enter-to, .fade-slide-leave-from {
-  opacity: 1;
+.slide-left-enter-from {
+  transform: translateX(100%);
+  opacity: 0;
+}
+.slide-left-enter-to {
   transform: translateX(0);
+  opacity: 1;
+}
+.slide-left-leave-from {
+  transform: translateX(0);
+  opacity: 1;
+}
+.slide-left-leave-to {
+  transform: translateX(-100%);
+  opacity: 0;
+}
+
+/* 右滑入（后退） */
+.slide-right-enter-active {
+  transition: all 0.4s ease;
+}
+.slide-right-leave-active {
+  transition: all 0.4s ease;
+  position: absolute;
+  width: 100%;
+}
+.slide-right-enter-from {
+  transform: translateX(-100%);
+  opacity: 0;
+}
+.slide-right-enter-to {
+  transform: translateX(0);
+  opacity: 1;
+}
+.slide-right-leave-from {
+  transform: translateX(0);
+  opacity: 1;
+}
+.slide-right-leave-to {
+  transform: translateX(100%);
+  opacity: 0;
 }
 </style>
 
 <script>
 export default {
+  data() {
+    return {
+      lastStep: 0,
+      transitionName: 'slide-right'
+    }
+  },
+  watch: {
+    'inbound._step'(newStep, oldStep) {
+      this.transitionName = newStep > oldStep ? 'slide-left' : 'slide-right';
+      this.lastStep = oldStep;
+    }
+  },
   created() {
-    if (!this.inbound) {
-      this.$set(this, 'inbound', { _step: 0, protocol: '' });
-    } else if (this.inbound._step === undefined) {
-      this.$set(this.inbound, '_step', 0);
-    }
+    if (!this.inbound) this.$set(this, 'inbound', { _step: 0, protocol: '' });
+    else if (this.inbound._step === undefined) this.$set(this.inbound, '_step', 0);
 
-    if (!this.dbInbound) {
-      this.$set(this, 'dbInbound', { enable: true, remark: '', listen: '', port: null, totalGB: 0, _expiryTime: null });
-    }
+    if (!this.dbInbound) this.$set(this, 'dbInbound', { enable: true, remark: '', listen: '', port: null, totalGB: 0, _expiryTime: null });
 
-    if (!this.protocols) {
-      this.protocols = ["vmess","vless","trojan","shadowsocks","dokodemo","socks","http","wireguard"];
-    }
+    if (!this.protocols) this.protocols = ["vmess","vless","trojan","shadowsocks","dokodemo","socks","http","wireguard"];
 
-    // 动态步骤数组
     this.steps = ["基础设置","协议设置","传输/TLS","嗅探"];
+    this.lastStep = this.inbound._step;
   }
 }
 </script>
