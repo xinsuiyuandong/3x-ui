@@ -322,7 +322,18 @@ check_config() {
     if [[ -n "$existing_cert" && -n "$existing_key" ]]; then
         echo -e "${green}面板已安装证书采用SSL保护${plain}"
         echo ""
-        echo -e "${green}登录访问面板URL: https://你的域名:${existing_port}${green}${existing_webBasePath}${plain}" 
+        # 获取所有一级目录名（以空格分隔）
+        local domains=$(find /root/cert/ -mindepth 1 -maxdepth 1 -type d -exec basename {} \;)
+        local domain_count=$(echo "$domains" | wc -w)
+
+        if [[ $domain_count -eq 1 ]]; then
+        local domain="$domains"
+        echo -e "${green}登录访问面板URL: https://${domain}:${existing_port}${green}${existing_webBasePath}${plain}"
+        elif [[ $domain_count -ge 2 ]]; then
+        echo -e "${green}登录访问面板URL: https://你的域名:${existing_port}${green}${existing_webBasePath}${plain}"
+        else
+        echo -e "${red}未找到任何域名，请检查 /root/cert/ 目录${plain}"
+        fi
     fi
     echo ""
     if [[ -z "$existing_cert" && -z "$existing_key" ]]; then
