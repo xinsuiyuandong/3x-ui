@@ -2,105 +2,104 @@
 <a-form :model="dbInbound" layout="vertical">
 
   <!-- 步骤条 -->
-  <a-steps :current="inbound._step" size="small" style="margin-bottom: 20px;">
+  <a-steps :current="inbound._step" size="small" style="margin-bottom: 16px;">
     <a-step title="基础设置" />
     <a-step title="协议设置" />
-    <a-step title="网络 / TLS" />
+    <a-step title="传输/TLS" />
     <a-step title="嗅探" />
   </a-steps>
 
-  <!-- 步骤一：基础设置 -->
-  <div v-show="inbound._step === 0">
-    <a-form-item :label="i18n('inbound.enable')">
-      <a-switch v-model:checked="dbInbound.enable" />
-    </a-form-item>
+  <!-- 进度条 -->
+  <a-progress :percent="Math.round(((inbound._step+1)/4)*100)" show-info style="margin-bottom: 20px;" />
 
-    <a-form-item :label="i18n('inbound.remark')">
-      <a-input v-model:value="dbInbound.remark" />
-    </a-form-item>
+  <!-- 步骤内容 -->
+  <transition name="fade-slide" mode="out-in">
+    <div :key="inbound._step" style="min-height: 200px; padding: 8px 0;">
 
-    <a-form-item :label="i18n('inbound.protocol')">
-      <a-select v-model:value="inbound.protocol" style="width: 200px">
-        <a-select-option v-for="p in protocols" :key="p" :value="p">{{p}}</a-select-option>
-      </a-select>
-    </a-form-item>
+      <!-- 步骤一：基础设置 -->
+      <div v-if="inbound._step === 0">
+        <a-form-item :label="i18n('inbound.enable')">
+          <a-switch v-model:checked="dbInbound.enable" />
+        </a-form-item>
 
-    <a-form-item :label="i18n('inbound.listen')">
-      <a-input v-model:value="dbInbound.listen" placeholder="0.0.0.0" />
-    </a-form-item>
+        <a-form-item :label="i18n('inbound.remark')">
+          <a-input v-model:value="dbInbound.remark" />
+        </a-form-item>
 
-    <a-form-item :label="i18n('inbound.port')">
-      <a-input-number v-model:value="dbInbound.port" style="width: 200px" />
-    </a-form-item>
-  </div>
+        <a-form-item :label="i18n('inbound.protocol')">
+          <a-select v-model:value="inbound.protocol" style="width: 200px">
+            <a-select-option v-for="p in protocols" :key="p" :value="p">{{p}}</a-select-option>
+          </a-select>
+        </a-form-item>
 
-  <!-- 步骤二：协议设置 -->
-  <div v-show="inbound._step === 1">
-    <!-- 协议相关配置，保持原有逻辑 -->
-    <div v-if="inbound.protocol === 'vmess'">
-      <a-form-item :label="i18n('inbound.clientId')">
-        <a-input v-model:value="dbInbound.settings.clients[0].id" />
-      </a-form-item>
-      <a-form-item :label="i18n('inbound.alterId')">
-        <a-input-number v-model:value="dbInbound.settings.clients[0].alterId" style="width: 200px" />
-      </a-form-item>
+        <a-form-item :label="i18n('inbound.listen')">
+          <a-input v-model:value="dbInbound.listen" placeholder="0.0.0.0" />
+        </a-form-item>
+
+        <a-form-item :label="i18n('inbound.port')">
+          <a-input-number v-model:value="dbInbound.port" style="width: 200px" />
+        </a-form-item>
+
+        <!-- 总流量 -->
+        <a-form-item>
+          <template slot="label">
+            <a-tooltip>
+              <template slot="title">
+                0 <span>{{ i18n("pages.inbounds.meansNoLimit") }}</span>
+              </template>
+              {{ i18n("pages.inbounds.totalFlow") }}
+              <a-icon type="question-circle"></a-icon>
+            </a-tooltip>
+          </template>
+          <a-input-number v-model.number="dbInbound.totalGB" :min="0" />
+        </a-form-item>
+
+        <!-- 过期时间 -->
+        <a-form-item>
+          <template slot="label">
+            <a-tooltip>
+              <template slot="title">
+                <span>{{ i18n("pages.inbounds.leaveBlankToNeverExpire") }}</span>
+              </template>
+              {{ i18n("pages.inbounds.expireDate") }}
+              <a-icon type="question-circle"></a-icon>
+            </a-tooltip>
+          </template>
+          <a-date-picker v-if="datepicker === 'gregorian'" :style="{ width: '100%' }" :show-time="{ format: 'HH:mm:ss' }"
+            format="YYYY-MM-DD HH:mm:ss" :dropdown-class-name="themeSwitcher.currentTheme" v-model="dbInbound._expiryTime">
+          </a-date-picker>
+          <a-persian-datepicker v-else placeholder='{{ i18n "pages.settings.datepickerPlaceholder" }}'
+            v-model="dbInbound._expiryTime">
+          </a-persian-datepicker>
+        </a-form-item>
+      </div>
+
+      <!-- 步骤二：协议设置 -->
+      <div v-if="inbound._step === 1">
+        <template v-if="inbound.protocol && protocolTemplates[inbound.protocol]">
+          {{template protocolTemplates[inbound.protocol]}}
+        </template>
+        <a-alert v-else type="warning" message="请选择协议" show-icon class="mb-16" />
+      </div>
+
+      <!-- 步骤三：传输/TLS -->
+      <div v-if="inbound._step === 2">
+        <template v-if="inbound.canEnableStream()">
+          {{template "form/streamSettings"}}
+          {{template "form/externalProxy"}}
+        </template>
+        <template v-if="inbound.canEnableTls()">
+          {{template "form/tlsSettings"}}
+        </template>
+      </div>
+
+      <!-- 步骤四：嗅探 -->
+      <div v-if="inbound._step === 3">
+        {{template "form/sniffing"}}
+      </div>
+
     </div>
-
-    <div v-if="inbound.protocol === 'shadowsocks'">
-      <a-form-item :label="i18n('inbound.password')">
-        <a-input v-model:value="dbInbound.settings.password" />
-      </a-form-item>
-      <a-form-item :label="i18n('inbound.method')">
-        <a-input v-model:value="dbInbound.settings.method" />
-      </a-form-item>
-    </div>
-
-    <div v-if="inbound.protocol === 'trojan'">
-      <a-form-item :label="i18n('inbound.password')">
-        <a-input v-model:value="dbInbound.settings.clients[0].password" />
-      </a-form-item>
-    </div>
-  </div>
-
-  <!-- 步骤三：网络 / TLS -->
-  <div v-show="inbound._step === 2">
-    <a-form-item :label="i18n('inbound.streamSettings')">
-      <a-select v-model:value="inbound.stream.network" style="width: 200px">
-        <a-select-option value="tcp">TCP</a-select-option>
-        <a-select-option value="ws">WebSocket</a-select-option>
-        <a-select-option value="http">HTTP</a-select-option>
-      </a-select>
-    </a-form-item>
-
-    <a-form-item :label="i18n('inbound.security')">
-      <a-select v-model:value="inbound.stream.security" style="width: 200px">
-        <a-select-option value="none">None</a-select-option>
-        <a-select-option value="tls">TLS</a-select-option>
-      </a-select>
-    </a-form-item>
-
-    <div v-if="inbound.stream.security === 'tls'">
-      <a-form-item :label="i18n('inbound.certFile')">
-        <a-input v-model:value="inbound.stream.tlsSettings.certFile" />
-      </a-form-item>
-      <a-form-item :label="i18n('inbound.keyFile')">
-        <a-input v-model:value="inbound.stream.tlsSettings.keyFile" />
-      </a-form-item>
-    </div>
-  </div>
-
-  <!-- 步骤四：嗅探 -->
-  <div v-show="inbound._step === 3">
-    <a-form-item :label="i18n('inbound.sniffing')">
-      <a-switch v-model:checked="inbound.sniffing.enabled" />
-    </a-form-item>
-    <a-form-item v-if="inbound.sniffing.enabled" :label="i18n('inbound.destOverride')">
-      <a-select v-model:value="inbound.sniffing.destOverride" mode="multiple" style="width: 300px">
-        <a-select-option value="http">HTTP</a-select-option>
-        <a-select-option value="tls">TLS</a-select-option>
-      </a-select>
-    </a-form-item>
-  </div>
+  </transition>
 
   <!-- 步骤按钮 -->
   <div style="margin-top: 20px; text-align: right;">
@@ -114,16 +113,41 @@
       完成
     </a-button>
   </div>
+
 </a-form>
+
+<!-- 动画 CSS -->
+<style scoped>
+.fade-slide-enter-active, .fade-slide-leave-active {
+  transition: all 0.4s ease;
+}
+.fade-slide-enter-from, .fade-slide-leave-to {
+  opacity: 0;
+  transform: translateX(20px);
+}
+.fade-slide-enter-to, .fade-slide-leave-from {
+  opacity: 1;
+  transform: translateX(0);
+}
+</style>
 
 <script>
 export default {
   created() {
     if (this.inbound._step === undefined) {
-      this.$set(this.inbound, '_step', 0);
+      this.$set(this.inbound, '_step', 0)
+    }
+    this.protocolTemplates = {
+      vmess: "form/vmess",
+      vless: "form/vless",
+      trojan: "form/trojan",
+      shadowsocks: "form/shadowsocks",
+      dokodemo: "form/dokodemo",
+      socks: "form/socks",
+      http: "form/http",
+      wireguard: "form/wireguard"
     }
   }
 }
 </script>
 {{end}}
-
