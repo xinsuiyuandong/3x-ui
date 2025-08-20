@@ -78,20 +78,25 @@ func (j *CheckClientIpJob) clearAccessLog() {
 
 func (j *CheckClientIpJob) hasLimitIp() bool {
 	db := database.GetDB()
-	var inbounds []*model.Inbound
 
+	var inbounds []*model.Inbound
 	err := db.Model(model.Inbound{}).Find(&inbounds).Error
 	if err != nil {
 		return false
 	}
 
 	for _, inbound := range inbounds {
+		// 新增：入站级设备限制直接激活 job
+		if inbound.DeviceLimit > 0 {
+			return true
+		}
+
 		if inbound.Settings == "" {
 			continue
 		}
 
 		settings := map[string][]model.Client{}
-		json.Unmarshal([]byte(inbound.Settings), &settings)
+		_ = json.Unmarshal([]byte(inbound.Settings), &settings)
 		clients := settings["clients"]
 
 		for _, client := range clients {
