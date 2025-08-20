@@ -31,13 +31,13 @@ import (
 	"github.com/robfig/cron/v3"
 )
 
-//go:embed assets
+//go:embed assets/*
 var assetsFS embed.FS
 
-//go:embed html
+//go:embed html/*
 var htmlFS embed.FS
 
-//go:embed translation
+//go:embed translation/*
 var i18nFS embed.FS
 
 var startTime = time.Now()
