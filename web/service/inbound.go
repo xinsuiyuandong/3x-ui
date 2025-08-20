@@ -35,10 +35,10 @@ func CheckDeviceLimit(inbound *model.Inbound, ip string) error {
     inboundLock.Lock()
     defer inboundLock.Unlock()
 
-    ipSet, ok := inboundActiveIPs[inboundId]
+    ipSet, ok := inboundActiveIPs[inbound.Id]
     if !ok {
         ipSet = make(map[string]bool)
-        inboundActiveIPs[inboundId] = ipSet
+        inboundActiveIPs[inbound.Id] = ipSet
     }
 
     // 如果当前 IP 已经存在，允许继续
@@ -50,7 +50,7 @@ func CheckDeviceLimit(inbound *model.Inbound, ip string) error {
     if len(ipSet) >= inbound.DeviceLimit {
         return errors.New(fmt.Sprintf(
             "设备超限: 入站 %d 限制 %d 台，当前已有 %d 台在线",
-            inboundId, inbound.DeviceLimit, len(ipSet),
+            inbound.Id, inbound.DeviceLimit, len(ipSet),
         ))
     }
 
