@@ -35,6 +35,8 @@ type Inbound struct {
 	Remark      string               `json:"remark" form:"remark"`
 	Enable      bool                 `json:"enable" form:"enable"`
 	ExpiryTime  int64                `json:"expiryTime" form:"expiryTime"`
+	// 新增：入站级设备限制（0 表示不限制）
+	DeviceLimit int                  `json:"deviceLimit" form:"deviceLimit"`
 	ClientStats []xray.ClientTraffic `gorm:"foreignKey:InboundId;references:Id" json:"clientStats" form:"clientStats"`
 
 	// config part
