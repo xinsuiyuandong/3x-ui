@@ -181,41 +181,41 @@
                 inModal.inbound.stream.tls.echServerKeys = msg.obj.echServerKeys;
                 inModal.inbound.stream.tls.settings.echConfigList = msg.obj.echConfigList;
             },,
-// 向导相关方法
-nextStep() {
-    if (!this.validateStep(this.currentStep)) return;
-    if (this.currentStep < this.maxStep) this.currentStep += 1;
-},
-prevStep() {
-    if (this.currentStep > 1) this.currentStep -= 1;
-},
-submit() {
-      if (this.currentStep < this.maxStep) {
-        this.currentStep = this.maxStep;
-        return;
-      }
-    if (!this.validateStep(this.currentStep)) return;
-    // 调用原有确认逻辑
-    inModal.ok();
-},
-close() {
-    inModal.visible = false;
-},
-validateStep(step) {
-    // 轻量级必填校验，可根据需要扩展
-    if (step === 1) {
-        if (!this.inbound.port || this.inbound.port <= 0) {
-            this.$message.error('{{ i18n "pages.inbounds.port" }}' + ' 不能为空');
-            return false;
+              // 向导相关方法
+           nextStep() {
+             if (!this.validateStep(this.currentStep)) return;
+             if (this.currentStep < this.maxStep) this.currentStep += 1;
+             },
+           prevStep() {
+             if (this.currentStep > 1) this.currentStep -= 1;
+             },
+          submit() {
+             if (this.currentStep < this.maxStep) {
+                 this.currentStep = this.maxStep;
+               return;
+              }
+          if (!this.validateStep(this.currentStep)) return;
+         // 调用原有确认逻辑
+           inModal.ok();
+              },
+         close() {
+           inModal.visible = false;
+              },
+         validateStep(step) {
+         // 轻量级必填校验，可根据需要扩展
+            if (step === 1) {
+                if (!this.inbound.port || this.inbound.port <= 0) {
+                    this.$message.error('{{ i18n "pages.inbounds.port" }}' + ' 不能为空');
+               return false;
         }
-        if (!this.inbound.protocol) {
-            this.$message.error('{{ i18n "protocol" }}' + ' 不能为空');
-            return false;
+                if (!this.inbound.protocol) {
+                    this.$message.error('{{ i18n "protocol" }}' + ' 不能为空');
+               return false;
+             }
         }
-    }
     // 其它步骤可以按需增加校验
-    return true;
-}
+           return true;
+          }
         },
     });
 
