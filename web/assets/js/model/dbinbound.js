@@ -9,6 +9,9 @@ class DBInbound {
         this.remark = "";
         this.enable = true;
         this.expiryTime = 0;
+        
+      // 新增：入站级设备限制（0 表示不限制）
+        this.deviceLimit = 0;
 
         this.listen = "";
         this.port = 0;
