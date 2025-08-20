@@ -45,6 +45,19 @@
     </a-form-item>
 
     <a-form-item>
+  <template slot="label">
+    <a-tooltip>
+      <template slot="title">
+        0 表示不限制（留空也表示不限制）
+      </template>
+      设备限制
+      <a-icon type="question-circle"></a-icon>
+    </a-tooltip>
+  </template>
+  <a-input-number v-model.number="dbInbound.deviceLimit" :min="0" :placeholder="'0 = ' + '{{ i18n \"unlimited\" }}'"></a-input-number>
+</a-form-item>
+
+    <a-form-item>
         <template slot="label">
             <a-tooltip>
                 <template slot="title">
