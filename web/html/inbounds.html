@@ -724,6 +724,12 @@
         width: 60,
         scopedSlots: { customRender: 'traffic' },
     }, {
+        title: '设备限制',
+        align: 'center',
+        width: 40,
+        dataIndex: 'deviceLimit',
+        customRender: (text) => (text > 0 ? text : '{{ i18n "unlimited" }}'),
+    }, {
         title: '{{ i18n "pages.inbounds.expireDate" }}',
         align: 'center',
         width: 40,
@@ -1113,6 +1119,8 @@
                     remark: dbInbound.remark,
                     enable: dbInbound.enable,
                     expiryTime: dbInbound.expiryTime,
+					// 新增这一行
+                    deviceLimit: dbInbound.deviceLimit,
 
                     listen: inbound.listen,
                     port: inbound.port,
@@ -1137,6 +1145,8 @@
                     remark: dbInbound.remark,
                     enable: dbInbound.enable,
                     expiryTime: dbInbound.expiryTime,
+					// 新增这一行
+                    deviceLimit: dbInbound.deviceLimit,
 
                     listen: inbound.listen,
                     port: inbound.port,
