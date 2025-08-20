@@ -63,9 +63,9 @@
         },
     };
 
-    new Vue({
+    const app = new Vue({
         delimiters: ['[[', ']]'],
-        el: '#inbound-modal',
+        el: '#app',
         data: {
             currentStep: 1,
             maxStep: 4,
@@ -189,7 +189,7 @@
            prevStep() {
              if (this.currentStep > 1) this.currentStep -= 1;
              },
-          submit() {
+           submit() {
              if (this.currentStep < this.maxStep) {
                  this.currentStep = this.maxStep;
                return;
@@ -198,8 +198,8 @@
          // 调用原有确认逻辑
            inModal.ok();
               },
-         close() {
-           inModal.visible = false;
+          close() {
+            inModal.visible = false;
               },
          validateStep(step) {
          // 轻量级必填校验，可根据需要扩展
