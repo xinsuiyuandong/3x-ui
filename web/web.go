@@ -160,8 +160,6 @@ func (s *Server) getHtmlTemplate(funcMap template.FuncMap) (*template.Template, 
     return t, nil
 }
 
-}
-
 
 func (s *Server) initRouter() (*gin.Engine, error) {
 	if config.IsDebug() {
