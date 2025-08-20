@@ -277,6 +277,10 @@ func (j *CheckClientIpJob) updateInboundClientIps(inboundClientIps *model.Inboun
 	for _, client := range clients {
 		if client.Email == clientEmail {
 			limitIp := client.LimitIP
+			// 新增：若客户端未设置（0/<=0），且入站设置了设备限制，则回退到入站级
+            if (limitIp <= 0) && (inbound != nil) && (inbound.DeviceLimit > 0) {
+              limitIp = inbound.DeviceLimit
+            }
 
 			if limitIp > 0 && inbound.Enable {
 				shouldCleanLog = true
