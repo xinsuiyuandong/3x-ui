@@ -3,6 +3,8 @@ package service
 import (
 	"encoding/json"
 	"fmt"
+	"errors"
+    "sync"
 	"sort"
 	"strconv"
 	"strings"
@@ -19,6 +21,52 @@ import (
 
 type InboundService struct {
 	xrayApi xray.XrayAPI
+}
+
+var inboundActiveIPs = make(map[int]map[string]bool) // inboundID -> {ipSet}
+var inboundLock sync.Mutex
+
+// 检查设备数是否超限
+func CheckDeviceLimit(inbound *model.Inbound, ip string) error {
+    if inbound.DeviceLimit <= 0 {
+        return nil // 不限制
+    }
+
+    inboundLock.Lock()
+    defer inboundLock.Unlock()
+
+    ipSet, ok := inboundActiveIPs[inbound.ID]
+    if !ok {
+        ipSet = make(map[string]bool)
+        inboundActiveIPs[inbound.ID] = ipSet
+    }
+
+    // 如果当前 IP 已经存在，允许继续
+    if ipSet[ip] {
+        return nil
+    }
+
+    // 如果超出限制
+    if len(ipSet) >= inbound.DeviceLimit {
+        return errors.New(fmt.Sprintf(
+            "设备超限: 入站 %d 限制 %d 台，当前已有 %d 台在线",
+            inbound.ID, inbound.DeviceLimit, len(ipSet),
+        ))
+    }
+
+    // 添加新 IP
+    ipSet[ip] = true
+    return nil
+}
+
+// 连接断开时清理 IP
+func ReleaseDevice(inboundID int, ip string) {
+    inboundLock.Lock()
+    defer inboundLock.Unlock()
+
+    if ipSet, ok := inboundActiveIPs[inboundID]; ok {
+        delete(ipSet, ip)
+    }
 }
 
 func (s *InboundService) GetInbounds(userId int) ([]*model.Inbound, error) {
