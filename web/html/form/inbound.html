@@ -34,7 +34,7 @@
 <!-- 总流量 + 设备限制 在同一行 -->
 <a-row :gutter="16">
   <a-col :span="12">
-    <a-form-item :label-col="{ md: {span:8} }" :wrapper-col="{ md: {span:14} }" label='{{ i18n "pages.inbounds.totalFlow" }}'>
+    <a-form-item label='{{ i18n "pages.inbounds.totalFlow" }}'>
       <a-tooltip slot="label">
         <template slot="title">
           0 <span>{{ i18n "pages.inbounds.meansNoLimit" }}</span>
@@ -47,7 +47,7 @@
   </a-col>
 
   <a-col :span="12">
-    <a-form-item :label-col="{ md: {span:8} }" :wrapper-col="{ md: {span:14} }" label="设备限制">
+    <a-form-item label="设备限制">
       <a-tooltip slot="label">
         <template slot="title">
           0 表示不限制（留空也表示不限制）
