@@ -174,7 +174,7 @@
         if (!msg.success) return;
         inModal.inbound.stream.tls.echServerKeys = msg.obj.echServerKeys;
         inModal.inbound.stream.tls.settings.echConfigList = msg.obj.echConfigList;
-      },  <!-- 这里修正：原来是 },, 现在只有一个逗号 -->
+      },
 
       // 向导相关
       nextStep() {
