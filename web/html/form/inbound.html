@@ -1,6 +1,5 @@
-{define "form/inbound"}
-<!-- Wizard Step 1：基础信息 -->
-<div v-show="currentStep === 1" class="wizard-step wizard-step--base">
+{{define "form/inbound"}}
+<!-- base -->
 <a-form :colon="false" :label-col="{ md: {span:8} }" :wrapper-col="{ md: {span:14} }">
     <a-form-item label='{{ i18n "enable" }}'>
         <a-switch v-model="dbInbound.enable"></a-switch>
@@ -81,10 +80,7 @@
         </a-persian-datepicker>
     </a-form-item>
 </a-form>
-</div>
 
-<!-- Wizard Step 2：协议与传输 -->
-<div v-show="currentStep === 2" class="wizard-step wizard-step--protocols">
 <!-- vmess settings -->
 <template v-if="inbound.protocol === Protocols.VMESS">
     {{template "form/vmess"}}
@@ -136,10 +132,6 @@
     {{template "form/tlsSettings"}}
 </template>
 
-</div>
-
-<!-- Wizard Step 3：进阶设置（例如 Sniffing 等） -->
-<div v-show="currentStep === 3" class="wizard-step wizard-step--advanced">
 <!-- sniffing -->
 <a-collapse>
     <a-collapse-panel header='Sniffing'>
@@ -155,25 +147,5 @@
     </a-collapse-panel>
 </a-collapse>
 -->
-    
-</div>
 
-<!-- Wizard Step 4：确认提交 -->
-<div v-show="currentStep === 4" class="wizard-step wizard-step--review">
-<div class="wizard-summary">
-  <a-alert type="info" show-icon message="{{ i18n "pages.inbounds.reviewTitle" }}"></a-alert>
-  <a-descriptions bordered :column="1" :style="{marginTop: '12px'}">
-    <a-descriptions-item label='{{ i18n "protocol" }}'>[[ inbound.protocol ]]</a-descriptions-item>
-    <a-descriptions-item label='{{ i18n "pages.inbounds.port" }}'>[[ inbound.port ]]</a-descriptions-item>
-    <a-descriptions-item label='{{ i18n "remark" }}'>[[ dbInbound.remark ]]</a-descriptions-item>
-    <a-descriptions-item label='{{ i18n "pages.inbounds.totalFlow" }}'>[[ dbInbound.totalGB || 0 ]]</a-descriptions-item>
-    <a-descriptions-item label='{{ i18n "pages.inbounds.expireDate" }}'>
-      <template v-if="dbInbound._expiryTime">[[ dbInbound._expiryTime ]]</template>
-      <template v-else>{{ i18n "pages.inbounds.neverExpire" }}</template>
-    </a-descriptions-item>
-  </a-descriptions>
-  <a-alert type="warning" show-icon :style="{marginTop: '12px'}" message="{{ i18n "pages.inbounds.reviewHint" }}"></a-alert>
-</div>
-</div>
-
-{end}
+{{end}}
