@@ -233,6 +233,8 @@
 "reviewTitle"="请确认以下配置信息"
 "neverExpire"="永不过期"
 "reviewHint"="如需修改请返回上一步"
+"unlimited"="无限制"
+"deviceLimit"="设备限制"
 
 
 [pages.client]
