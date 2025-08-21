@@ -118,7 +118,7 @@
                 // 注意: 原始文件中此处为 app.datepicker，但 app 此时还未完全定义，
                 // 更稳妥的方式是在 this 上下文可用后引用，或者直接使用全局 app 变量。
                 // 鉴于原始代码如此，我们暂时保留，若有问题可调整。
-                return window.app.datepicker; 
+                return app.datepicker; 
             },
             get delayedExpireDays() {
                 return this.client && this.client.expiryTime < 0 ? this.client.expiryTime / -86400000 : 0;
