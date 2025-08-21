@@ -5,6 +5,7 @@
         :class="themeSwitcher.currentTheme"
         :ok-text="inModal.okText" cancel-text='{{ i18n "close" }}'>
 
+    <!-- 动画效果CSS: 为步骤切换提供平滑的淡入淡出效果 -->
     <style>
         .step-content-wrapper .step-content {
             opacity: 1;
@@ -17,18 +18,22 @@
         }
     </style>
 
+    <!-- 步骤条: 可视化展示当前进度 -->
     <a-steps :current="currentStep" size="small" :style="{marginBottom: '10px'}">
         <a-step title='基本配置'></a-step>
         <a-step title='协议配置'></a-step>
         <a-step title='传输与安全配置'></a-step>
     </a-steps>
+    
+    <!-- 百分比进度条: 更直观地反馈完成度 -->
     <a-progress :percent="progressPercent" size="small" :style="{marginBottom: '20px'}" />
 
-
+    <!-- 动画容器: 包裹表单内容以应用切换动画 -->
     <div class="step-content-wrapper">
         {{template "form/inbound"}}
     </div>
 
+    <!-- 自定义页脚: 替换默认按钮，实现分步导航 -->
     <div slot="footer">
         <a-button @click="inModal.close">{{ i18n "close" }}</a-button>
         <a-button @click="prevStep" :disabled="currentStep === 0">上一步</a-button>
@@ -70,7 +75,7 @@
             this.confirm = confirm;
             this.visible = true;
             this.isEdit = isEdit;
-            // 每次打开时重置到第一步
+            // 关键: 每次打开弹窗时，都强制重置到第一步，避免状态混乱
             if (app) {
                 app.currentStep = 0;
             }
@@ -84,66 +89,75 @@
         },
     };
 
+    // 修正: 确保Vue实例结构正确
     const app = new Vue({
         delimiters: ['[[', ']]'],
         el: '#inbound-modal',
         data: {
             inModal: inModal,
             delayedStart: false,
+            // 新增: 当前步骤，从0开始 (第一步)
             currentStep: 0,
-            totalSteps: 3, // 总步数
+            // 新增: 总步数，方便统一管理
+            totalSteps: 3, 
+
+            // 修正: 以下get属性必须放在data对象内部，这是导致面板无法运行的根本原因
+            get inbound() {
+                return inModal.inbound;
+            },
+            get dbInbound() {
+                return inModal.dbInbound;
+            },
+            get isEdit() {
+                return inModal.isEdit;
+            },
+            get client() {
+                return inModal.inbound.clients[0];
+            },
+            get datepicker() {
+                // 注意: 原始文件中此处为 app.datepicker，但 app 此时还未完全定义，
+                // 更稳妥的方式是在 this 上下文可用后引用，或者直接使用全局 app 变量。
+                // 鉴于原始代码如此，我们暂时保留，若有问题可调整。
+                return window.app.datepicker; 
+            },
+            get delayedExpireDays() {
+                return this.client && this.client.expiryTime < 0 ? this.client.expiryTime / -86400000 : 0;
+            },
+            set delayedExpireDays(days) {
+                this.client.expiryTime = -86400000 * days;
+            },
+            get externalProxy() {
+                return this.inbound.stream.externalProxy.length > 0;
+            },
+            set externalProxy(value) {
+                if (value) {
+                    inModal.inbound.stream.externalProxy = [{
+                        forceTls: "same",
+                        dest: window.location.hostname,
+                        port: inModal.inbound.port,
+                        remark: ""
+                    }];
+                } else {
+                    inModal.inbound.stream.externalProxy = [];
+                }
+            }
         },
+        // 新增: 计算属性，用于动态计算进度条百分比
         computed: {
-            // 新增：计算进度条百分比
             progressPercent() {
-                // (当前步数 / (总步数 - 1)) * 100
+                // 公式: (当前步数 / (总步数 - 1)) * 100
+                // 例如: 第1步(index 0) -> 0%; 第2步(index 1) -> 50%; 第3步(index 2) -> 100%
                 return Math.round((this.currentStep / (this.totalSteps - 1)) * 100);
             }
         },
-        get inbound() {
-            return inModal.inbound;
-        },
-        get dbInbound() {
-            return inModal.dbInbound;
-        },
-        get isEdit() {
-            return inModal.isEdit;
-        },
-        get client() {
-            return inModal.inbound.clients[0];
-        },
-        get datepicker() {
-            return app.datepicker;
-        },
-        get delayedExpireDays() {
-            return this.client && this.client.expiryTime < 0 ? this.client.expiryTime / -86400000 : 0;
-        },
-        set delayedExpireDays(days) {
-            this.client.expiryTime = -86400000 * days;
-        },
-        get externalProxy() {
-            return this.inbound.stream.externalProxy.length > 0;
-        },
-        set externalProxy(value) {
-            if (value) {
-                inModal.inbound.stream.externalProxy = [{
-                    forceTls: "same",
-                    dest: window.location.hostname,
-                    port: inModal.inbound.port,
-                    remark: ""
-                }];
-            } else {
-                inModal.inbound.stream.externalProxy = [];
-            }
-        },
         methods: {
-            // 下一步
+            // 新增: "下一步" 按钮的点击事件处理
             nextStep() {
                 if (this.currentStep < this.totalSteps - 1) {
                     this.currentStep++;
                 }
             },
-            // 上一步
+            // 新增: "上一步" 按钮的点击事件处理
             prevStep() {
                 if (this.currentStep > 0) {
                     this.currentStep--;
