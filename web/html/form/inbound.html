@@ -162,7 +162,7 @@
 <!-- Wizard Step 4：确认提交 -->
 <div v-show="currentStep === 4" class="wizard-step wizard-step--review">
 <div class="wizard-summary">
-  <a-alert type="info" show-icon message="{{ i18n "pages.inbounds.reviewTitle" | default "请确认以下配置信息" }}"></a-alert>
+  <a-alert type="info" show-icon message="{{ i18n "pages.inbounds.reviewTitle" }}"></a-alert>
   <a-descriptions bordered :column="1" :style="{marginTop: '12px'}">
     <a-descriptions-item label='{{ i18n "protocol" }}'>[[ inbound.protocol ]]</a-descriptions-item>
     <a-descriptions-item label='{{ i18n "pages.inbounds.port" }}'>[[ inbound.port ]]</a-descriptions-item>
@@ -170,10 +170,10 @@
     <a-descriptions-item label='{{ i18n "pages.inbounds.totalFlow" }}'>[[ dbInbound.totalGB || 0 ]]</a-descriptions-item>
     <a-descriptions-item label='{{ i18n "pages.inbounds.expireDate" }}'>
       <template v-if="dbInbound._expiryTime">[[ dbInbound._expiryTime ]]</template>
-      <template v-else>{{ i18n "pages.inbounds.neverExpire" | default "永不过期" }}</template>
+      <template v-else>{{ i18n "pages.inbounds.neverExpire" }}</template>
     </a-descriptions-item>
   </a-descriptions>
-  <a-alert type="warning" show-icon :style="{marginTop: '12px'}" message="{{ i18n "pages.inbounds.reviewHint" | default "如需修改请返回上一步" }}"></a-alert>
+  <a-alert type="warning" show-icon :style="{marginTop: '12px'}" message="{{ i18n "pages.inbounds.reviewHint" }}"></a-alert>
 </div>
 </div>
 {{end}}
