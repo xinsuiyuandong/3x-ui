@@ -1,27 +1,10 @@
 {{define "modals/inboundModal"}}
 <a-modal id="inbound-modal" v-model="inModal.visible" :title="inModal.title"
-        :dialog-style="{ top: '20px' }" @ok="submit"
+        :dialog-style="{ top: '20px' }" @ok="inModal.ok"
         :confirm-loading="inModal.confirmLoading" :closable="true" :mask-closable="false"
         :class="themeSwitcher.currentTheme"
         :ok-text="inModal.okText" cancel-text='{{ i18n "close" }}'>
-      {{template "form/inbound"}}
-    
-<!-- 向导步骤条 -->
-<a-steps :current="currentStep - 1" :style="{ marginBottom: '16px' }">
-  <a-step title="基础信息"></a-step>
-  <a-step title="协议与传输"></a-step>
-  <a-step title="进阶设置"></a-step>
-  <a-step title="确认提交"></a-step>
-</a-steps>
-    <a-progress :percent="(currentStep / maxStep) * 100" status="active" :stroke-width="8" />
-
-<template slot="footer">
-    <a-button @click="close">{{ i18n "close" }}</a-button>
-    <a-button v-if="currentStep > 1" @click="prevStep">上一步</a-button>
-    <a-button type="primary" v-if="currentStep < maxStep" @click="nextStep">下一步</a-button>
-    <a-button type="primary" :loading="inModal.confirmLoading" v-if="currentStep === maxStep" @click="submit">提交</a-button>
-</template>
-
+    {{template "form/inbound"}}
 </a-modal>
 <script>
 
@@ -67,8 +50,6 @@
         delimiters: ['[[', ']]'],
         el: '#inbound-modal',
         data: {
-            currentStep: 1,
-            maxStep: 4,
             inModal: inModal,
             delayedStart: false,
             get inbound() {
@@ -180,44 +161,9 @@
                 }
                 inModal.inbound.stream.tls.echServerKeys = msg.obj.echServerKeys;
                 inModal.inbound.stream.tls.settings.echConfigList = msg.obj.echConfigList;
-            },,
-            // 向导相关方法
-           nextStep() {
-               if (!this.validateStep(this.currentStep)) return;
-               if (this.currentStep < this.maxStep) this.currentStep += 1;
-              },
-           prevStep() {
-               if (this.currentStep > 1) this.currentStep -= 1;
-              },
-           submit() {
-               if (this.currentStep < this.maxStep) {
-                   this.currentStep = this.maxStep;
-               return;
-                 }
-              if (!this.validateStep(this.currentStep)) return;
-            // 调用原有确认逻辑
-              inModal.ok();
-             },
-           close() {
-              inModal.visible = false;
-             },
-           validateStep(step) {
-          // 轻量级必填校验，可根据需要扩展
-              if (step === 1) {
-              if (!this.inbound.port || this.inbound.port <= 0) {
-                   this.$message.error('{{ i18n "pages.inbounds.port" }}' + ' 不能为空');
-                   return false;
-                }
-              if (!this.inbound.protocol) {
-                   this.$message.error('{{ i18n "protocol" }}' + ' 不能为空');
-                  return false;
-               }
-            }
-           // 其它步骤可以按需增加校验
-            return true;
-             }
-           },
-      });
+            },
+        },
+    });
 
 </script>
 {{end}}
