@@ -1,169 +1,214 @@
 {{define "modals/inboundModal"}}
-<a-modal id="inbound-modal" v-model="inModal.visible" :title="inModal.title"
-        :dialog-style="{ top: '20px' }" @ok="inModal.ok"
-        :confirm-loading="inModal.confirmLoading" :closable="true" :mask-closable="false"
-        :class="themeSwitcher.currentTheme"
-        :ok-text="inModal.okText" cancel-text='{{ i18n "close" }}'>
-    {{template "form/inbound"}}
+<a-modal
+  id="inbound-modal"
+  v-model="inModal.visible"
+  :title="inModal.title"
+  :dialog-style="{ top: '20px' }"
+  @ok="submit"
+  :confirm-loading="inModal.confirmLoading"
+  :closable="true"
+  :mask-closable="false"
+  :class="themeSwitcher.currentTheme"
+  :ok-text="inModal.okText"
+  cancel-text='{{ i18n "close" }}'>
+
+  <!-- 向导步骤条放在最上面，视觉更清楚 -->
+  <a-steps :current="currentStep - 1" :style="{ marginBottom: '16px' }">
+    <a-step title="基础信息"></a-step>
+    <a-step title="协议与传输"></a-step>
+    <a-step title="进阶设置"></a-step>
+    <a-step title="确认提交"></a-step>
+  </a-steps>
+  <a-progress :percent="(currentStep / maxStep) * 100" status="active" :stroke-width="8" :style="{ marginBottom: '16px' }" />
+
+  <!-- 表单主体 -->
+  {{template "form/inbound"}}
+
+  <template slot="footer">
+    <a-button @click="close">{{ i18n "close" }}</a-button>
+    <a-button v-if="currentStep > 1" @click="prevStep">上一步</a-button>
+    <a-button type="primary" v-if="currentStep < maxStep" @click="nextStep">下一步</a-button>
+    <a-button type="primary" :loading="inModal.confirmLoading" v-if="currentStep === maxStep" @click="submit">提交</a-button>
+  </template>
 </a-modal>
+
 <script>
+  const inModal = {
+    title: '',
+    visible: false,
+    confirmLoading: false,
+    okText: '{{ i18n "sure" }}',
+    isEdit: false,
+    confirm: null,
+    inbound: new Inbound(),
+    dbInbound: new DBInbound(),
+    ok() {
+      ObjectUtil.execute(inModal.confirm, inModal.inbound, inModal.dbInbound);
+    },
+    show({ title = '', okText = '{{ i18n "sure" }}', inbound = null, dbInbound = null, confirm = (inbound, dbInbound) => {}, isEdit = false }) {
+      this.title = title;
+      this.okText = okText;
+      if (inbound) {
+        this.inbound = Inbound.fromJson(inbound.toJson());
+      } else {
+        this.inbound = new Inbound();
+      }
+      if (dbInbound) {
+        this.dbInbound = new DBInbound(dbInbound);
+      } else {
+        this.dbInbound = new DBInbound();
+      }
+      this.confirm = confirm;
+      this.visible = true;
+      this.isEdit = isEdit;
 
-    const inModal = {
-        title: '',
-        visible: false,
-        confirmLoading: false,
-        okText: '{{ i18n "sure" }}',
-        isEdit: false,
-        confirm: null,
-        inbound: new Inbound(),
-        dbInbound: new DBInbound(),
-        ok() {
-            ObjectUtil.execute(inModal.confirm, inModal.inbound, inModal.dbInbound);
-        },
-        show({ title = '', okText = '{{ i18n "sure" }}', inbound = null, dbInbound = null, confirm = (inbound, dbInbound) => {}, isEdit = false }) {
-            this.title = title;
-            this.okText = okText;
-            if (inbound) {
-                this.inbound = Inbound.fromJson(inbound.toJson());
-            } else {
-                this.inbound = new Inbound();
-            }
-            if (dbInbound) {
-                this.dbInbound = new DBInbound(dbInbound);
-            } else {
-                this.dbInbound = new DBInbound();
-            }
-            this.confirm = confirm;
-            this.visible = true;
-            this.isEdit = isEdit;
-        },
-        close() {
-            inModal.visible = false;
-            inModal.loading(false);
-        },
-        loading(loading=true) {
-            inModal.confirmLoading = loading;
-        },
-    };
+      // 打开时重置到第 1 步（避免上次停留在中间步骤）
+      if (typeof this._vmSetStep === 'function') {
+        this._vmSetStep(1);
+      }
+    },
+    close() {
+      inModal.visible = false;
+      inModal.loading(false);
+    },
+    loading(loading=true) {
+      inModal.confirmLoading = loading;
+    },
+  };
 
-    new Vue({
-        delimiters: ['[[', ']]'],
-        el: '#inbound-modal',
-        data: {
-            inModal: inModal,
-            delayedStart: false,
-            get inbound() {
-                return inModal.inbound;
-            },
-            get dbInbound() {
-                return inModal.dbInbound;
-            },
-            get isEdit() {
-                return inModal.isEdit;
-            },
-            get client() {
-                return inModal.inbound.clients[0];
-            },
-            get datepicker() {
-                return app.datepicker;
-            },
-            get delayedExpireDays() {
-                return this.client && this.client.expiryTime < 0 ? this.client.expiryTime / -86400000 : 0;
-            },
-            set delayedExpireDays(days) {
-                this.client.expiryTime = -86400000 * days;
-            },
-            get externalProxy() {
-                return this.inbound.stream.externalProxy.length > 0;
-            },
-            set externalProxy(value) {
-                if (value) {
-                    inModal.inbound.stream.externalProxy = [{
-                        forceTls: "same",
-                        dest: window.location.hostname,
-                        port: inModal.inbound.port,
-                        remark: ""
-                    }];
-                } else {
-                    inModal.inbound.stream.externalProxy = [];
-                }
-            }
-        },
-        methods: {
-            streamNetworkChange() {
-                if (!inModal.inbound.canEnableTls()) {
-                    this.inModal.inbound.stream.security = 'none';
-                }
-                if (!inModal.inbound.canEnableReality()) {
-                    this.inModal.inbound.reality = false;
-                }
-                if (this.inModal.inbound.protocol == Protocols.VLESS && !inModal.inbound.canEnableTlsFlow()) {
-                    this.inModal.inbound.settings.vlesses.forEach(client => {
-                        client.flow = "";
-                    });
-                }
-            },
-            SSMethodChange() {
-                this.inModal.inbound.settings.password = RandomUtil.randomShadowsocksPassword(this.inModal.inbound.settings.method)
-                
-                if (this.inModal.inbound.isSSMultiUser) {
-                    if (this.inModal.inbound.settings.shadowsockses.length ==0){
-                        this.inModal.inbound.settings.shadowsockses = [new Inbound.ShadowsocksSettings.Shadowsocks()];
-                    }
-                    if (!this.inModal.inbound.isSS2022) {
-                        this.inModal.inbound.settings.shadowsockses.forEach(client => {
-                            client.method = this.inModal.inbound.settings.method;
-                        })
-                    } else {
-                        this.inModal.inbound.settings.shadowsockses.forEach(client => {
-                            client.method = "";
-                        })
-                    }
-                    this.inModal.inbound.settings.shadowsockses.forEach(client => {
-                        client.password = RandomUtil.randomShadowsocksPassword(this.inModal.inbound.settings.method)
-                    })
-                } else {
-                    if (this.inModal.inbound.settings.shadowsockses.length > 0){
-                        this.inModal.inbound.settings.shadowsockses = [];
-                    }
-                }
-            },
-            setDefaultCertData(index) {
-                inModal.inbound.stream.tls.certs[index].certFile = app.defaultCert;
-                inModal.inbound.stream.tls.certs[index].keyFile = app.defaultKey;
-            },
-            async getNewX25519Cert() {
-                inModal.loading(true);
-                const msg = await HttpUtil.post('/server/getNewX25519Cert');
-                inModal.loading(false);
-                if (!msg.success) {
-                    return;
-                }
-                inModal.inbound.stream.reality.privateKey = msg.obj.privateKey;
-                inModal.inbound.stream.reality.settings.publicKey = msg.obj.publicKey;
-            },
-            async getNewmldsa65() {
-                inModal.loading(true);
-                const msg = await HttpUtil.post('/server/getNewmldsa65');
-                inModal.loading(false);
-                if (!msg.success) {
-                    return;
-                }
-                inModal.inbound.stream.reality.mldsa65Seed = msg.obj.seed;
-                inModal.inbound.stream.reality.settings.mldsa65Verify = msg.obj.verify;
-            },
-            async getNewEchCert() {
-                inModal.loading(true);
-                const msg = await HttpUtil.post('/server/getNewEchCert', {sni: inModal.inbound.stream.tls.sni});
-                inModal.loading(false);
-                if (!msg.success) {
-                    return;
-                }
-                inModal.inbound.stream.tls.echServerKeys = msg.obj.echServerKeys;
-                inModal.inbound.stream.tls.settings.echConfigList = msg.obj.echConfigList;
-            },
-        },
-    });
+  new Vue({
+    delimiters: ['[[', ']]'],
+    el: '#inbound-modal',
+    data: {
+      currentStep: 1,
+      maxStep: 4,
+      inModal: inModal,
+      delayedStart: false,
+      get inbound() { return inModal.inbound; },
+      get dbInbound() { return inModal.dbInbound; },
+      get isEdit() { return inModal.isEdit; },
+      get client() { return inModal.inbound.clients[0]; },
+      get datepicker() { return app.datepicker; },
+      get delayedExpireDays() {
+        return this.client && this.client.expiryTime < 0 ? this.client.expiryTime / -86400000 : 0;
+      },
+      set delayedExpireDays(days) {
+        this.client.expiryTime = -86400000 * days;
+      },
+      get externalProxy() {
+        return this.inbound.stream.externalProxy.length > 0;
+      },
+      set externalProxy(value) {
+        if (value) {
+          inModal.inbound.stream.externalProxy = [{
+            forceTls: "same",
+            dest: window.location.hostname,
+            port: inModal.inbound.port,
+            remark: ""
+          }];
+        } else {
+          inModal.inbound.stream.externalProxy = [];
+        }
+      }
+    },
+    created() {
+      // 提供一个方法给 inModal.show 重置步骤
+      inModal._vmSetStep = (n) => { this.currentStep = n; };
+    },
+    methods: {
+      streamNetworkChange() {
+        if (!inModal.inbound.canEnableTls()) {
+          this.inModal.inbound.stream.security = 'none';
+        }
+        if (!inModal.inbound.canEnableReality()) {
+          this.inModal.inbound.reality = false;
+        }
+        if (this.inModal.inbound.protocol == Protocols.VLESS && !inModal.inbound.canEnableTlsFlow()) {
+          this.inModal.inbound.settings.vlesses.forEach(client => { client.flow = ""; });
+        }
+      },
+      SSMethodChange() {
+        this.inModal.inbound.settings.password = RandomUtil.randomShadowsocksPassword(this.inModal.inbound.settings.method);
+        if (this.inModal.inbound.isSSMultiUser) {
+          if (this.inModal.inbound.settings.shadowsockses.length == 0){
+            this.inModal.inbound.settings.shadowsockses = [new Inbound.ShadowsocksSettings.Shadowsocks()];
+          }
+          if (!this.inModal.inbound.isSS2022) {
+            this.inModal.inbound.settings.shadowsockses.forEach(client => { client.method = this.inModal.inbound.settings.method; })
+          } else {
+            this.inModal.inbound.settings.shadowsockses.forEach(client => { client.method = ""; })
+          }
+          this.inModal.inbound.settings.shadowsockses.forEach(client => {
+            client.password = RandomUtil.randomShadowsocksPassword(this.inModal.inbound.settings.method)
+          })
+        } else {
+          if (this.inModal.inbound.settings.shadowsockses.length > 0){
+            this.inModal.inbound.settings.shadowsockses = [];
+          }
+        }
+      },
+      setDefaultCertData(index) {
+        inModal.inbound.stream.tls.certs[index].certFile = app.defaultCert;
+        inModal.inbound.stream.tls.certs[index].keyFile = app.defaultKey;
+      },
+      async getNewX25519Cert() {
+        inModal.loading(true);
+        const msg = await HttpUtil.post('/server/getNewX25519Cert');
+        inModal.loading(false);
+        if (!msg.success) return;
+        inModal.inbound.stream.reality.privateKey = msg.obj.privateKey;
+        inModal.inbound.stream.reality.settings.publicKey = msg.obj.publicKey;
+      },
+      async getNewmldsa65() {
+        inModal.loading(true);
+        const msg = await HttpUtil.post('/server/getNewmldsa65');
+        inModal.loading(false);
+        if (!msg.success) return;
+        inModal.inbound.stream.reality.mldsa65Seed = msg.obj.seed;
+        inModal.inbound.stream.reality.settings.mldsa65Verify = msg.obj.verify;
+      },
+      async getNewEchCert() {
+        inModal.loading(true);
+        const msg = await HttpUtil.post('/server/getNewEchCert', {sni: inModal.inbound.stream.tls.sni});
+        inModal.loading(false);
+        if (!msg.success) return;
+        inModal.inbound.stream.tls.echServerKeys = msg.obj.echServerKeys;
+        inModal.inbound.stream.tls.settings.echConfigList = msg.obj.echConfigList;
+      },  <!-- 这里修正：原来是 },, 现在只有一个逗号 -->
 
+      // 向导相关
+      nextStep() {
+        if (!this.validateStep(this.currentStep)) return;
+        if (this.currentStep < this.maxStep) this.currentStep += 1;
+      },
+      prevStep() {
+        if (this.currentStep > 1) this.currentStep -= 1;
+      },
+      submit() {
+        if (this.currentStep < this.maxStep) {
+          this.currentStep = this.maxStep;
+          return;
+        }
+        if (!this.validateStep(this.currentStep)) return;
+        inModal.ok();
+      },
+      close() {
+        inModal.visible = false;
+      },
+      validateStep(step) {
+        if (step === 1) {
+          if (!this.inbound.port || this.inbound.port <= 0) {
+            this.$message.error('{{ i18n "pages.inbounds.port" }} 不能为空');
+            return false;
+          }
+          if (!this.inbound.protocol) {
+            this.$message.error('{{ i18n "protocol" }} 不能为空');
+            return false;
+          }
+        }
+        return true;
+      }
+    },
+  });
 </script>
 {{end}}
