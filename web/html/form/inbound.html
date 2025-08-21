@@ -32,41 +32,37 @@
     </a-form-item>
 
 <!-- 总流量 + 设备限制 在同一行 -->
-    <a-row :gutter="16">
-      <a-col :span="12">
-        <a-form-item>
-          <template slot="label">
-            <a-tooltip>
-              <template slot="title">
-                0 <span>{{ i18n "pages.inbounds.meansNoLimit" }}</span>
-              </template>
-              {{ i18n "pages.inbounds.totalFlow" }}
-              <a-icon type="question-circle"></a-icon>
-            </a-tooltip>
-          </template>
-          <a-input-number v-model.number="dbInbound.totalGB" :min="0" style="width: 100%"></a-input-number>
-        </a-form-item>
-      </a-col>
+<a-row :gutter="16">
+  <a-col :span="12">
+    <a-form-item :label-col="{ md: {span:8} }" :wrapper-col="{ md: {span:14} }" label='{{ i18n "pages.inbounds.totalFlow" }}'>
+      <a-tooltip slot="label">
+        <template slot="title">
+          0 <span>{{ i18n "pages.inbounds.meansNoLimit" }}</span>
+        </template>
+        {{ i18n "pages.inbounds.totalFlow" }}
+        <a-icon type="question-circle"></a-icon>
+      </a-tooltip>
+      <a-input-number v-model.number="dbInbound.totalGB" :min="0" style="width: 100%" />
+    </a-form-item>
+  </a-col>
 
-      <a-col :span="12">
-        <a-form-item>
-          <template slot="label">
-            <a-tooltip>
-              <template slot="title">
-                0 表示不限制（留空也表示不限制）
-              </template>
-              设备限制
-              <a-icon type="question-circle"></a-icon>
-            </a-tooltip>
-          </template>
-          <a-input-number
-            v-model.number="dbInbound.deviceLimit"
-            :min="0"
-            style="width: 100%"
-            placeholder="0 = 不限制" />
-        </a-form-item>
-      </a-col>
-    </a-row>    
+  <a-col :span="12">
+    <a-form-item :label-col="{ md: {span:8} }" :wrapper-col="{ md: {span:14} }" label="设备限制">
+      <a-tooltip slot="label">
+        <template slot="title">
+          0 表示不限制（留空也表示不限制）
+        </template>
+        设备限制
+        <a-icon type="question-circle"></a-icon>
+      </a-tooltip>
+      <a-input-number
+        v-model.number="dbInbound.deviceLimit"
+        :min="0"
+        style="width: 100%"
+        placeholder="0 = 不限制" />
+    </a-form-item>
+  </a-col>
+</a-row>
 
     <a-form-item>
         <template slot="label">
