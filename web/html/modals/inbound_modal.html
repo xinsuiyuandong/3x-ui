@@ -90,9 +90,10 @@
     };
 
     // 修正: 确保Vue实例结构正确
-    const app = new Vue({
+
+    new Vue({
         delimiters: ['[[', ']]'],
-        el: '#app',
+        el: '#inbound-modal',
         data: {
             inModal: inModal,
             delayedStart: false,
@@ -142,27 +143,8 @@
                 }
             }
         },
-        // 新增: 计算属性，用于动态计算进度条百分比
-        computed: {
-            progressPercent() {
-                // 公式: (当前步数 / (总步数 - 1)) * 100
-                // 例如: 第1步(index 0) -> 0%; 第2步(index 1) -> 50%; 第3步(index 2) -> 100%
-                return Math.round((this.currentStep / (this.totalSteps - 1)) * 100);
-            }
-        },
+            
         methods: {
-            // 新增: "下一步" 按钮的点击事件处理
-            nextStep() {
-                if (this.currentStep < this.totalSteps - 1) {
-                    this.currentStep++;
-                }
-            },
-            // 新增: "上一步" 按钮的点击事件处理
-            prevStep() {
-                if (this.currentStep > 0) {
-                    this.currentStep--;
-                }
-            },
             streamNetworkChange() {
                 if (!inModal.inbound.canEnableTls()) {
                     this.inModal.inbound.stream.security = 'none';
