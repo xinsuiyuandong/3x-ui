@@ -779,6 +779,9 @@
         el: '#app',
         mixins: [MediaQueryMixin],
         data: {
+			// 新增: 用于控制步骤条的数据
+            currentStep: 0,
+            totalSteps: 3,
             themeSwitcher,
             persianDatepicker,
             loadingStates: {
@@ -814,6 +817,19 @@
             pageSize: 50,
         },
         methods: {
+			    // 新增: "下一步" 按钮的点击事件处理
+                nextStep() {
+                  if (this.currentStep < this.totalSteps - 1) {
+                      this.currentStep++;
+                     }
+                },
+    
+                // 新增: "上一步" 按钮的点击事件处理
+                prevStep() {
+                 if (this.currentStep > 0) {
+                     this.currentStep--;
+                  }
+            },
             loading(spinning = true) {
                 this.loadingStates.spinning = spinning;
             },
@@ -1615,6 +1631,13 @@
             this.loading(false);
         },
         computed: {
+			    // 新增: 用于动态计算进度条百分比
+            progressPercent() {
+                 if (this.totalSteps <= 1) {
+                 return 100;
+              }
+            return Math.round((this.currentStep / (this.totalSteps - 1)) * 100);
+                },
             total() {
                 let down = 0, up = 0;
                 let clients = 0, deactive = [], depleted = [], expiring = [];
