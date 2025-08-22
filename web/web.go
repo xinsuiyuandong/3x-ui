@@ -152,11 +152,8 @@ func (s *Server) getHtmlTemplate(funcMap template.FuncMap) (*template.Template, 
         // 去掉前缀 "html/"，让 {{template "form/inbound"}} 这种名字能被正确找到
         name := strings.TrimPrefix(path, "html/")
 
-        // 去掉 .html 后缀，这样模板名就是 form/inbound、modals/inbound_modal 等
-        name = strings.TrimSuffix(name, ".html")
-
         // 注册模板
-        _, err = t.New(name).Parse(string(b))
+        _, err = t.Parse(string(b))
         return err
     })
     if err != nil {
