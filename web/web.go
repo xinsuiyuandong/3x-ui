@@ -128,10 +128,10 @@ func (s *Server) getHtmlFiles() ([]string, error) {
 }
 
 func (s *Server) getHtmlTemplate(funcMap template.FuncMap) (*template.Template, error) {
-    // 这里用 htmlFS（//go:embed html/*）而不是“templates”
+    // 初始化模板，并注册 funcMap（比如 i18n）
     t := template.New("").Funcs(funcMap)
 
-    // 递归遍历 embed 的 html 目录，解析所有 .html 模板
+    // 遍历 embed 的 html 目录，逐个解析 .html 文件
     err := fs.WalkDir(htmlFS, "html", func(path string, d fs.DirEntry, err error) error {
         if err != nil {
             return err
@@ -143,14 +143,19 @@ func (s *Server) getHtmlTemplate(funcMap template.FuncMap) (*template.Template, 
             return nil
         }
 
-        // 读出模板内容
+        // 读出模板文件内容
         b, err := htmlFS.ReadFile(path)
         if err != nil {
             return err
         }
 
-        // 去掉前缀“html/”，让 {{template "form/inbound"}} 这种名字能被正确找到
+        // 去掉前缀 "html/"，让 {{template "form/inbound"}} 这种名字能被正确找到
         name := strings.TrimPrefix(path, "html/")
+
+        // 去掉 .html 后缀，这样模板名就是 form/inbound、modals/inbound_modal 等
+        name = strings.TrimSuffix(name, ".html")
+
+        // 注册模板
         _, err = t.New(name).Parse(string(b))
         return err
     })
