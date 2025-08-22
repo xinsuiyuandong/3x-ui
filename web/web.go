@@ -128,40 +128,38 @@ func (s *Server) getHtmlFiles() ([]string, error) {
 }
 
 func (s *Server) getHtmlTemplate(funcMap template.FuncMap) (*template.Template, error) {
-    // 初始化模板，并注册 funcMap（比如 i18n）
-    t := template.New("").Funcs(funcMap)
+	t := template.New("").Funcs(funcMap)
 
-    // 遍历 embed 的 html 目录，逐个解析 .html 文件
-    err := fs.WalkDir(htmlFS, "html", func(path string, d fs.DirEntry, err error) error {
-        if err != nil {
-            return err
-        }
-        if d.IsDir() {
-            return nil
-        }
-        if !strings.HasSuffix(path, ".html") {
-            return nil
-        }
+	// 遍历 embed 的 html 目录，解析所有 .html 文件
+	err := fs.WalkDir(htmlFS, "html", func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			return nil
+		}
+		if !strings.HasSuffix(path, ".html") {
+			return nil
+		}
 
-        // 读出模板文件内容
-        b, err := htmlFS.ReadFile(path)
-        if err != nil {
-            return err
-        }
+		// 读出模板内容
+		b, err := htmlFS.ReadFile(path)
+		if err != nil {
+			return err
+		}
 
-        // 去掉前缀 "html/"，让 {{template "form/inbound"}} 这种名字能被正确找到
-        name := strings.TrimPrefix(path, "html/")
-
-        // 注册模板
-        _, err = t.Parse(string(b))
-        return err
-    })
-    if err != nil {
-        return nil, err
-    }
-    return t, nil
+		// 直接 Parse，模板名字用文件里 {{define "xxx"}} 指定的
+		_, err = t.Parse(string(b))
+		if err != nil {
+			return err
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return t, nil
 }
-
 
 func (s *Server) initRouter() (*gin.Engine, error) {
 	if config.IsDebug() {
