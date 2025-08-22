@@ -1,156 +1,170 @@
 {{define "form/inbound"}}
-<!-- 步骤 1: 基本配置 -->
-<!-- v-show: 控制该步骤的显示与隐藏 -->
-<!-- class="step-content" 和 v-cloak: 用于配合CSS实现切换动画 -->
-<div v-show="currentStep === 0" class="step-content" v-cloak>
-    <a-form :colon="false" :label-col="{ md: {span:8} }" :wrapper-col="{ md: {span:14} }">
-        <a-form-item label='{{ i18n "enable" }}'>
-            <a-switch v-model="dbInbound.enable"></a-switch>
-        </a-form-item>
-        <a-form-item label='{{ i18n "remark" }}'>
-            <a-input v-model.trim="dbInbound.remark"></a-input>
-        </a-form-item>
+<!-- base -->
+<a-form :colon="false" :label-col="{ md: {span:8} }" :wrapper-col="{ md: {span:14} }">
+    <a-form-item label='{{ i18n "enable" }}'>
+        <a-switch v-model="dbInbound.enable"></a-switch>
+    </a-form-item>
+    <a-form-item label='{{ i18n "remark" }}'>
+        <a-input v-model.trim="dbInbound.remark"></a-input>
+    </a-form-item>
 
-        <a-form-item label='{{ i18n "protocol" }}'>
-            <a-select v-model="inbound.protocol" :disabled="isEdit" :dropdown-class-name="themeSwitcher.currentTheme">
-                <a-select-option v-for="p in Protocols" :key="p" :value="p">[[ p ]]</a-select-option>
-            </a-select>
-        </a-form-item>
+    <a-form-item label='{{ i18n "protocol" }}'>
+        <a-select v-model="inbound.protocol" :disabled="isEdit" :dropdown-class-name="themeSwitcher.currentTheme">
+            <a-select-option v-for="p in Protocols" :key="p" :value="p">[[ p ]]</a-select-option>
+        </a-select>
+    </a-form-item>
 
-        <a-form-item>
-            <template slot="label">
-                <a-tooltip>
-                    <template slot="title">
-                        <span>{{ i18n "pages.inbounds.monitorDesc" }}</span>
-                    </template>
-                    {{ i18n "monitor" }}
-                    <a-icon type="question-circle"></a-icon>
-                </a-tooltip>
+    <a-form-item>
+        <template slot="label">
+            <a-tooltip>
+                <template slot="title">
+                    <span>{{ i18n "pages.inbounds.monitorDesc" }}</span>
+                </template>
+                {{ i18n "monitor" }}
+                <a-icon type="question-circle"></a-icon>
+            </a-tooltip>
+        </template>
+        <a-input v-model.trim="inbound.listen"></a-input>
+    </a-form-item>
+
+    <a-form-item label='{{ i18n "pages.inbounds.port" }}'>
+        <a-input-number v-model.number="inbound.port" :min="1" :max="65531"></a-input-number>
+    </a-form-item>
+
+<!-- 总流量 + 设备限制 在同一行 -->
+<a-row :gutter="16">
+  <!-- 总流量 -->
+  <a-col :span="12">
+    <a-form-item
+      :label="() => (
+        <span>
+          {{ i18n('pages.inbounds.totalFlow') }}
+          <a-tooltip placement='top'>
+            <template slot='title'>
+              0 <span>{{ i18n('pages.inbounds.meansNoLimit') }}</span>
             </template>
-            <a-input v-model.trim="inbound.listen"></a-input>
-        </a-form-item>
+            <a-icon type='question-circle' style='color:#1890ff; margin-left:4px;' />
+          </a-tooltip>
+        </span>
+      )"
+    >
+      <a-input-number
+        v-model.number="dbInbound.totalGB"
+        :min="0"
+        style="width: 100%"
+      />
+    </a-form-item>
+  </a-col>
 
-        <a-form-item label='{{ i18n "pages.inbounds.port" }}'>
-            <a-input-number v-model.number="inbound.port" :min="1" :max="65531"></a-input-number>
-        </a-form-item>
-
-        <!-- 集成【总流量】和【设备限制】到同一行 -->
-        <a-row :gutter="16">
-            <a-col :span="12">
-                <a-form-item label='{{ i18n "pages.inbounds.totalFlow" }}' :label-col="{ md: {span:16} }" :wrapper-col="{ md: {span:8} }">
-                    <a-tooltip slot="label">
-                        <template slot="title">
-                            0 <span>{{ i18n "pages.inbounds.meansNoLimit" }}</span>
-                        </template>
-                        {{ i18n "pages.inbounds.totalFlow" }}
-                        <a-icon type="question-circle"></a-icon>
-                    </a-tooltip>
-                    <a-input-number v-model.number="dbInbound.totalGB" :min="0" style="width: 100%" />
-                </a-form-item>
-            </a-col>
-            <a-col :span="12">
-                <a-form-item label="设备限制" :label-col="{ md: {span:10} }" :wrapper-col="{ md: {span:14} }">
-                    <a-tooltip slot="label">
-                        <template slot="title">
-                            0 表示不限制（留空也表示不限制）
-                        </template>
-                        设备限制
-                        <a-icon type="question-circle"></a-icon>
-                    </a-tooltip>
-                    <a-input-number
-                        v-model.number="dbInbound.deviceLimit"
-                        :min="0"
-                        style="width: 100%"
-                        placeholder="0 = 不限制" />
-                </a-form-item>
-            </a-col>
-        </a-row>
-
-        <a-form-item>
-            <template slot="label">
-                <a-tooltip>
-                    <template slot="title">
-                        <span>{{ i18n "pages.inbounds.leaveBlankToNeverExpire" }}</span>
-                    </template>
-                    {{ i18n "pages.inbounds.expireDate" }}
-                    <a-icon type="question-circle"></a-icon>
-                </a-tooltip>
+  <!-- 设备限制 -->
+  <a-col :span="12">
+    <a-form-item
+      :label="() => (
+        <span>
+          设备限制
+          <a-tooltip placement='top'>
+            <template slot='title'>
+              0 表示不限制（留空也表示不限制）
             </template>
-            <a-date-picker :style="{ width: '100%' }" v-if="datepicker == 'gregorian'" :show-time="{ format: 'HH:mm:ss' }"
-                format="YYYY-MM-DD HH:mm:ss" :dropdown-class-name="themeSwitcher.currentTheme"
-                v-model="dbInbound._expiryTime"></a-date-picker>
-            <a-persian-datepicker v-else placeholder='{{ i18n "pages.settings.datepickerPlaceholder" }}'
-                value="dbInbound._expiryTime" v-model="dbInbound._expiryTime">
-            </a-persian-datepicker>
-        </a-form-item>
-    </a-form>
-</div>
+            <a-icon type='question-circle' style='color:#1890ff; margin-left:4px;' />
+          </a-tooltip>
+        </span>
+      )"
+    >
+      <a-input-number
+        v-model.number="dbInbound.deviceLimit"
+        :min="0"
+        style="width: 100%"
+        placeholder="0 = 不限制"
+      />
+    </a-form-item>
+  </a-col>
+</a-row>
 
-<!-- 步骤 2: 协议配置 -->
-<div v-show="currentStep === 1" class="step-content" v-cloak>
-    <!-- 根据第一步选择的协议，动态显示对应的配置表单 -->
-    <template v-if="inbound.protocol === Protocols.VMESS">
-        {{template "form/vmess"}}
-    </template>
+    <a-form-item>
+        <template slot="label">
+            <a-tooltip>
+                <template slot="title">
+                    <span>{{ i18n "pages.inbounds.leaveBlankToNeverExpire" }}</span>
+                </template>
+                {{ i18n "pages.inbounds.expireDate" }}
+                <a-icon type="question-circle"></a-icon>
+            </a-tooltip>
+        </template>
+        <a-date-picker :style="{ width: '100%' }" v-if="datepicker == 'gregorian'" :show-time="{ format: 'HH:mm:ss' }"
+            format="YYYY-MM-DD HH:mm:ss" :dropdown-class-name="themeSwitcher.currentTheme"
+            v-model="dbInbound._expiryTime"></a-date-picker>
+        <a-persian-datepicker v-else placeholder='{{ i18n "pages.settings.datepickerPlaceholder" }}'
+            value="dbInbound._expiryTime" v-model="dbInbound._expiryTime">
+        </a-persian-datepicker>
+    </a-form-item>
+</a-form>
 
-    <template v-if="inbound.protocol === Protocols.VLESS">
-        {{template "form/vless"}}
-    </template>
+<!-- vmess settings -->
+<template v-if="inbound.protocol === Protocols.VMESS">
+    {{template "form/vmess"}}
+</template>
 
-    <template v-if="inbound.protocol === Protocols.TROJAN">
-        {{template "form/trojan"}}
-    </template>
+<!-- vless settings -->
+<template v-if="inbound.protocol === Protocols.VLESS">
+    {{template "form/vless"}}
+</template>
 
-    <template v-if="inbound.protocol === Protocols.SHADOWSOCKS">
-        {{template "form/shadowsocks"}}
-    </template>
+<!-- trojan settings -->
+<template v-if="inbound.protocol === Protocols.TROJAN">
+    {{template "form/trojan"}}
+</template>
 
-    <template v-if="inbound.protocol === Protocols.DOKODEMO">
-        {{template "form/dokodemo"}}
-    </template>
+<!-- shadowsocks -->
+<template v-if="inbound.protocol === Protocols.SHADOWSOCKS">
+    {{template "form/shadowsocks"}}
+</template>
 
-    <template v-if="inbound.protocol === Protocols.SOCKS">
-        {{template "form/socks"}}
-    </template>
+<!-- dokodemo-door -->
+<template v-if="inbound.protocol === Protocols.DOKODEMO">
+    {{template "form/dokodemo"}}
+</template>
 
-    <template v-if="inbound.protocol === Protocols.HTTP">
-        {{template "form/http"}}
-    </template>
+<!-- socks -->
+<template v-if="inbound.protocol === Protocols.SOCKS">
+    {{template "form/socks"}}
+</template>
 
-    <template v-if="inbound.protocol === Protocols.WIREGUARD">
-        {{template "form/wireguard"}}
-    </template>
-</div>
+<!-- http -->
+<template v-if="inbound.protocol === Protocols.HTTP">
+    {{template "form/http"}}
+</template>
 
-<!-- 步骤 3: 传输与安全配置 -->
-<div v-show="currentStep === 2" class="step-content" v-cloak>
-    <!-- 流控设置 -->
-    <template v-if="inbound.canEnableStream()">
-        {{template "form/streamSettings"}}
-        {{template "form/externalProxy" }}
-    </template>
+<!-- wireguard -->
+<template v-if="inbound.protocol === Protocols.WIREGUARD">
+    {{template "form/wireguard"}}
+</template>
 
-    <!-- TLS 设置 -->
-    <template v-if="inbound.canEnableTls()">
-        {{template "form/tlsSettings"}}
-    </template>
+<!-- stream settings -->
+<template v-if="inbound.canEnableStream()">
+    {{template "form/streamSettings"}}
+    {{template "form/externalProxy" }}
+</template>
 
-    <!-- 流量嗅探 (Sniffing) 设置 -->
-    <a-collapse>
-        <a-collapse-panel header='Sniffing'>
-            {{template "form/sniffing"}}
-        </a-collapse-panel>
-    </a-collapse>
+<!-- tls settings -->
+<template v-if="inbound.canEnableTls()">
+    {{template "form/tlsSettings"}}
+</template>
 
-    <!-- 补回: 保留原文件中被注释掉的 allocate 代码块 -->
-    <!-- allocate -->
-    <!-- Temporarily disabled until we accepts range for port allocation
-    <a-collapse>
-        <a-collapse-panel header='Allocate'>
-            {{template "form/allocate"}}
-        </a-collapse-panel>
-    </a-collapse>
-    -->
-</div>
+<!-- sniffing -->
+<a-collapse>
+    <a-collapse-panel header='Sniffing'>
+        {{template "form/sniffing"}}
+    </a-collapse-panel>
+</a-collapse>
+
+<!-- allocate -->
+<!-- Temporarily disabled until we accepts range for port allocation
+<a-collapse>
+    <a-collapse-panel header='Allocate'>
+        {{template "form/allocate"}}
+    </a-collapse-panel>
+</a-collapse>
+-->
 
 {{end}}
