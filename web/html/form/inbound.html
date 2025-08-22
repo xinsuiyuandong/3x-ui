@@ -1,6 +1,9 @@
 {{define "form/inbound"}}
-<!-- base -->
-<a-form :colon="false" :label-col="{ md: {span:8} }" :wrapper-col="{ md: {span:14} }">
+<!-- 步骤 1: 基本配置 -->
+<!-- v-show: 控制该步骤的显示与隐藏 -->
+<!-- class="step-content" 和 v-cloak: 用于配合CSS实现切换动画 -->
+<div v-show="currentStep === 0" class="step-content" v-cloak>
+    <a-form :colon="false" :label-col="{ md: {span:8} }" :wrapper-col="{ md: {span:14} }">
     <!-- 开关：启用/禁用 -->
     <a-form-item label='{{ i18n "enable" }}'>
         <a-switch v-model="dbInbound.enable"></a-switch>
@@ -104,72 +107,73 @@
         </a-persian-datepicker>
     </a-form-item>
 </a-form>
+</div>
 
-<!-- vmess settings -->
-<template v-if="inbound.protocol === Protocols.VMESS">
-    {{template "form/vmess"}}
-</template>
+<!-- 步骤 2: 协议配置 -->
+<div v-show="currentStep === 1" class="step-content" v-cloak>
+    <!-- 根据第一步选择的协议，动态显示对应的配置表单 -->
+    <template v-if="inbound.protocol === Protocols.VMESS">
+        {{template "form/vmess"}}
+    </template>
 
-<!-- vless settings -->
-<template v-if="inbound.protocol === Protocols.VLESS">
-    {{template "form/vless"}}
-</template>
+    <template v-if="inbound.protocol === Protocols.VLESS">
+        {{template "form/vless"}}
+    </template>
 
-<!-- trojan settings -->
-<template v-if="inbound.protocol === Protocols.TROJAN">
-    {{template "form/trojan"}}
-</template>
+    <template v-if="inbound.protocol === Protocols.TROJAN">
+        {{template "form/trojan"}}
+    </template>
 
-<!-- shadowsocks -->
-<template v-if="inbound.protocol === Protocols.SHADOWSOCKS">
-    {{template "form/shadowsocks"}}
-</template>
+    <template v-if="inbound.protocol === Protocols.SHADOWSOCKS">
+        {{template "form/shadowsocks"}}
+    </template>
 
-<!-- dokodemo-door -->
-<template v-if="inbound.protocol === Protocols.DOKODEMO">
-    {{template "form/dokodemo"}}
-</template>
+    <template v-if="inbound.protocol === Protocols.DOKODEMO">
+        {{template "form/dokodemo"}}
+    </template>
 
-<!-- socks -->
-<template v-if="inbound.protocol === Protocols.SOCKS">
-    {{template "form/socks"}}
-</template>
+    <template v-if="inbound.protocol === Protocols.SOCKS">
+        {{template "form/socks"}}
+    </template>
 
-<!-- http -->
-<template v-if="inbound.protocol === Protocols.HTTP">
-    {{template "form/http"}}
-</template>
+    <template v-if="inbound.protocol === Protocols.HTTP">
+        {{template "form/http"}}
+    </template>
 
-<!-- wireguard -->
-<template v-if="inbound.protocol === Protocols.WIREGUARD">
-    {{template "form/wireguard"}}
-</template>
+    <template v-if="inbound.protocol === Protocols.WIREGUARD">
+        {{template "form/wireguard"}}
+    </template>
+</div>
 
-<!-- stream settings -->
-<template v-if="inbound.canEnableStream()">
-    {{template "form/streamSettings"}}
-    {{template "form/externalProxy" }}
-</template>
+<!-- 步骤 3: 传输与安全配置 -->
+<div v-show="currentStep === 2" class="step-content" v-cloak>
+    <!-- 流控设置 -->
+    <template v-if="inbound.canEnableStream()">
+        {{template "form/streamSettings"}}
+        {{template "form/externalProxy" }}
+    </template>
 
-<!-- tls settings -->
-<template v-if="inbound.canEnableTls()">
-    {{template "form/tlsSettings"}}
-</template>
+    <!-- TLS 设置 -->
+    <template v-if="inbound.canEnableTls()">
+        {{template "form/tlsSettings"}}
+    </template>
 
-<!-- sniffing -->
-<a-collapse>
-    <a-collapse-panel header='Sniffing'>
-        {{template "form/sniffing"}}
-    </a-collapse-panel>
-</a-collapse>
+    <!-- 流量嗅探 (Sniffing) 设置 -->
+    <a-collapse>
+        <a-collapse-panel header='Sniffing'>
+            {{template "form/sniffing"}}
+        </a-collapse-panel>
+    </a-collapse>
 
-<!-- allocate -->
-<!-- Temporarily disabled until we accepts range for port allocation
-<a-collapse>
-    <a-collapse-panel header='Allocate'>
-        {{template "form/allocate"}}
-    </a-collapse-panel>
-</a-collapse>
--->
+    <!-- 补回: 保留原文件中被注释掉的 allocate 代码块 -->
+    <!-- allocate -->
+    <!-- Temporarily disabled until we accepts range for port allocation
+    <a-collapse>
+        <a-collapse-panel header='Allocate'>
+            {{template "form/allocate"}}
+        </a-collapse-panel>
+    </a-collapse>
+    -->
+</div>
 
 {{end}}
