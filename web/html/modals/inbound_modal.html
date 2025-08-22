@@ -97,11 +97,6 @@
         data: {
             inModal: inModal,
             delayedStart: false,
-            // 新增: 当前步骤，从0开始 (第一步)
-            currentStep: 0,
-            // 新增: 总步数，方便统一管理
-            totalSteps: 3, 
-
             // 修正: 以下get属性必须放在data对象内部，这是导致面板无法运行的根本原因
             get inbound() {
                 return inModal.inbound;
