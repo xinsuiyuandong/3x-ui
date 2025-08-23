@@ -31,8 +31,11 @@ func (s *SettingService) GetInboundID() int64 {
 }
 
 // 记录每个入站的在线 IP
-var inboundActiveIPs = make(map[int]map[string]bool) // inboundID -> {ipSet}
-var inboundLock sync.Mutex
+var (
+	// 设备限制全局锁和活动 IP 列表（供 job 使用）
+	inboundLock     sync.Mutex
+	inboundActiveIPs = make(map[int64]map[string]bool) // inboundID -> { clientIP: true }
+)
 
 // GetInboundByID 根据ID获取入站配置
 func GetInboundByID(id int64) *model.Inbound {
