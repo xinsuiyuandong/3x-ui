@@ -16,7 +16,60 @@ import (
 	"x-ui/database/model"
 	"x-ui/logger"
 	"x-ui/xray"
+                 "x-ui/web/service"
 )
+
+type DeviceCleanupJob struct{}
+
+var deviceJob *DeviceCleanupJob
+
+func NewDeviceCleanupJob() *DeviceCleanupJob {
+	if deviceJob == nil {
+		deviceJob = &DeviceCleanupJob{}
+	}
+	return deviceJob
+}
+
+// 定期清理不活跃设备记录
+func (j *DeviceCleanupJob) Run() {
+	db := database.GetDB()
+
+	var inbounds []*model.Inbound
+	if err := db.Find(&inbounds).Error; err != nil {
+		logger.Warning("DeviceCleanupJob 获取入站失败:", err)
+		return
+	}
+
+	for _, inbound := range inbounds {
+		if inbound.DeviceLimit <= 0 {
+			continue
+		}
+
+		service.InboundLock.Lock()
+		ipSet, ok := service.InboundActiveIPs[inbound.Id]
+		if ok {
+			for ip := range ipSet {
+				// 可根据业务逻辑判断是否清理，此处简单示例: 保持现有
+				// 如果有条件可释放，调用 service.ReleaseDevice
+				_ = ip
+			}
+		}
+		service.InboundLock.Unlock()
+	}
+}
+
+// ===============================
+// 启动定时清理任务
+// ===============================
+func StartDeviceCleanupJob() {
+	go func() {
+		ticker := time.NewTicker(10 * time.Second) // 每10秒检查一次
+		for range ticker.C {
+			NewDeviceCleanupJob().Run()
+		}
+	}()
+	log.Println("[DEVICE_LIMIT] 设备清理任务已启动")
+}
 
 type CheckClientIpJob struct {
 	lastClear     int64
