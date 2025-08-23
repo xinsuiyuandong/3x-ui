@@ -111,33 +111,45 @@ func (s *Server) Start() (err error) {
 	}
 
 	// --- 使用 AutoHttpsListener 处理设备限制 ---
-	if certFile != "" && keyFile != "" {
-		cert, err := tls.LoadX509KeyPair(certFile, keyFile)
-		if err == nil {
-			listener = network.NewAutoHttpsListener(listener, func(conn net.Conn) error {
-				clientIP := conn.RemoteAddr().String()
-				if err := service.CheckDeviceLimit(clientIP); err != nil {
-					conn.Close()
-					return err
-				}
-				// 在连接关闭时自动释放设备
-				go func() {
-					time.Sleep(24 * time.Hour) // 或者根据实际逻辑释放
-					service.ReleaseDevice(clientIP)
-				}()
-				return nil
-			})
-			listener = tls.NewListener(listener, &tls.Config{
-				Certificates: []tls.Certificate{cert},
-			})
-			logger.Info("Sub server running HTTPS on", listener.Addr())
-		} else {
-			logger.Error("Error loading certificates:", err)
-			logger.Info("Sub server running HTTP on", listener.Addr())
-		}
-	} else {
-		logger.Info("Sub server running HTTP on", listener.Addr())
-	}
+if certFile != "" || keyFile != "" {
+    cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+    if err == nil {
+        c := &tls.Config{
+            Certificates: []tls.Certificate{cert},
+        }
+        // 使用 AutoHttpsListener，每个连接检查设备限制
+        listener = network.NewAutoHttpsListener(listener, func(conn net.Conn) error {
+            clientIP := strings.Split(conn.RemoteAddr().String(), ":")[0] // 去掉端口
+
+            // 获取入站配置
+            inboundID := s.settingService.GetInboundID() // 获取默认入站ID
+            inbound, err := service.GetInboundByID(inboundID)
+            if err != nil {
+                conn.Close()
+                return err
+            }
+
+            // ① 检查设备数限制
+            if err := service.CheckDeviceLimit(inbound, clientIP); err != nil {
+                conn.Close()
+                return err
+            }
+
+            // ② 连接断开时释放设备占用
+            defer service.ReleaseDevice(inbound, clientIP)
+
+            return nil
+        })
+        listener = tls.NewListener(listener, c)
+        logger.Info("Sub server running HTTPS on", listener.Addr())
+    } else {
+        logger.Error("Error loading certificates:", err)
+        logger.Info("Sub server running HTTP on", listener.Addr())
+    }
+} else {
+    logger.Info("Sub server running HTTP on", listener.Addr())
+}
+
 	s.listener = listener
 
 	s.httpServer = &http.Server{
