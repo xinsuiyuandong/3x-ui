@@ -10,8 +10,9 @@ import (
 	"regexp"
 	"sort"
 	"time"
+	"strings"
+	"sync"
 
-	"slices"
 	"x-ui/database"
 	"x-ui/database/model"
 	"x-ui/logger"
@@ -19,56 +20,206 @@ import (
                  "x-ui/web/service"
 )
 
-type DeviceCleanupJob struct{}
+// =================================================================
+// 中文注释: 以下是用于实现设备限制功能的核心代码
+// =================================================================
 
-var deviceJob *DeviceCleanupJob
+// ActiveClientIPs 中文注释: 用于在内存中跟踪每个用户的活跃IP
+// 结构: map[用户email] -> map[IP地址] -> 最后活跃时间
+var ActiveClientIPs = make(map[string]map[string]time.Time)
+var activeClientsLock sync.RWMutex
 
-func NewDeviceCleanupJob() *DeviceCleanupJob {
-	if deviceJob == nil {
-		deviceJob = &DeviceCleanupJob{}
-	}
-	return deviceJob
+// ClientStatus 中文注释: 用于跟踪每个用户的状态（是否因为设备超限而被禁用）
+// 结构: map[用户email] -> 是否被禁用(true/false)
+var ClientStatus = make(map[string]bool)
+var clientStatusLock sync.RWMutex
+
+// CheckDeviceLimitJob 中文注释: 这是我们的设备限制任务的结构体
+type CheckDeviceLimitJob struct {
+	inboundService service.InboundService
+	xrayService    *service.XrayService
+	// lastPosition 中文注释: 用于记录上次读取 access.log 的位置，避免重复读取
+	lastPosition int64
 }
 
-// 定期清理不活跃设备记录
-func (j *DeviceCleanupJob) Run() {
-	db := database.GetDB()
+// NewCheckDeviceLimitJob 中文注释: 创建一个新的任务实例
+func NewCheckDeviceLimitJob(xrayService *service.XrayService) *CheckDeviceLimitJob {
+	return &CheckDeviceLimitJob{
+		xrayService: xrayService,
+	}
+}
 
-	var inbounds []*model.Inbound
-	if err := db.Find(&inbounds).Error; err != nil {
-		logger.Warning("DeviceCleanupJob 获取入站失败:", err)
+// Run 中文注释: 定时任务的主函数，每次定时器触发时执行
+func (j *CheckDeviceLimitJob) Run() {
+	// 中文注释: 检查 xray 是否正在运行，如果xray没运行，则无需执行此任务
+	if !j.xrayService.IsXrayRunning() {
 		return
 	}
 
-	for _, inbound := range inbounds {
-		if inbound.DeviceLimit <= 0 {
-			continue
-		}
+	// 1. 清理过期的IP
+	j.cleanupExpiredIPs()
 
-		service.InboundLock.Lock()
-		ipSet, ok := service.InboundActiveIPs[inbound.Id]
-		if ok {
-			for ip := range ipSet {
-				// 可根据业务逻辑判断是否清理，此处简单示例: 保持现有
-				// 如果有条件可释放，调用 service.ReleaseDevice
-				_ = ip
+	// 2. 解析新的日志并更新IP列表
+	j.parseAccessLog()
+
+	// 3. 检查所有用户的设备限制状态
+	j.checkAllClientsLimit()
+}
+
+// cleanupExpiredIPs 中文注释: 清理长时间不活跃的IP
+func (j *CheckDeviceLimitJob) cleanupExpiredIPs() {
+	activeClientsLock.Lock()
+	defer activeClientsLock.Unlock()
+
+	now := time.Now()
+	for email, ips := range ActiveClientIPs {
+		for ip, lastSeen := range ips {
+			// 中文注释: 如果一个IP超过3分钟没有新的连接日志，我们就认为它已经下线
+			if now.Sub(lastSeen) > 3*time.Minute {
+				delete(ActiveClientIPs[email], ip)
 			}
 		}
-		service.InboundLock.Unlock()
+		// 中文注释: 如果一个用户的所有IP都下线了，就从大Map中移除这个用户，节省内存
+		if len(ActiveClientIPs[email]) == 0 {
+			delete(ActiveClientIPs, email)
+		}
 	}
 }
 
-// ===============================
-// 启动定时清理任务
-// ===============================
-func StartDeviceCleanupJob() {
-	go func() {
-		ticker := time.NewTicker(10 * time.Second) // 每10秒检查一次
-		for range ticker.C {
-			NewDeviceCleanupJob().Run()
+// parseAccessLog 中文注释: 解析 xray access log 来获取最新的用户IP信息
+func (j *CheckDeviceLimitJob) parseAccessLog() {
+	logPath, err := xray.GetAccessLogPath()
+	if err != nil || logPath == "none" || logPath == "" {
+		return
+	}
+
+	file, err := os.Open(logPath)
+	if err != nil {
+		return
+	}
+	defer file.Close()
+
+	// 中文注释: 移动到上次读取结束的位置，实现增量读取
+	file.Seek(j.lastPosition, 0)
+
+	scanner := bufio.NewScanner(file)
+	// 中文注释: 使用正则表达式从日志行中提取 email 和 IP
+	emailRegex := regexp.MustCompile(`email: ([^ ]+)`)
+	ipRegex := regexp.MustCompile(`from (?:tcp:|udp:)?\[?([0-9a-fA-F\.:]+)\]?:\d+ accepted`)
+
+	activeClientsLock.Lock()
+	defer activeClientsLock.Unlock()
+
+	now := time.Now()
+	for scanner.Scan() {
+		line := scanner.Text()
+		
+		emailMatch := emailRegex.FindStringSubmatch(line)
+		ipMatch := ipRegex.FindStringSubmatch(line)
+
+		if len(emailMatch) > 1 && len(ipMatch) > 1 {
+			email := emailMatch[1]
+			ip := ipMatch[1]
+
+			if ip == "127.0.0.1" || ip == "::1" {
+				continue
+			}
+
+			if _, ok := ActiveClientIPs[email]; !ok {
+				ActiveClientIPs[email] = make(map[string]time.Time)
+			}
+			ActiveClientIPs[email][ip] = now
 		}
-	}()
-	log.Println("[DEVICE_LIMIT] 设备清理任务已启动")
+	}
+
+	currentPosition, err := file.Seek(0, os.SEEK_END)
+	if err == nil {
+		if currentPosition < j.lastPosition {
+			j.lastPosition = 0
+		} else {
+			j.lastPosition = currentPosition
+		}
+	}
+}
+
+// checkAllClientsLimit 中文注释: 核心功能，检查所有用户，对超限的执行封禁，对恢复的执行解封
+func (j *CheckDeviceLimitJob) checkAllClientsLimit() {
+	db := database.GetDB()
+	var inbounds []*model.Inbound
+	db.Where("device_limit > 0 AND enable = ?", true).Find(&inbounds)
+
+	if len(inbounds) == 0 {
+		return
+	}
+
+	inboundLimits := make(map[int]int)
+	inboundTags := make(map[int]string)
+	for _, inbound := range inbounds {
+		inboundLimits[inbound.Id] = inbound.DeviceLimit
+		inboundTags[inbound.Id] = inbound.Tag
+	}
+
+	activeClientsLock.RLock()
+	clientStatusLock.Lock()
+	defer activeClientsLock.RUnlock()
+	defer clientStatusLock.Unlock()
+
+	for email, ips := range ActiveClientIPs {
+		traffic, err := j.inboundService.GetClientTrafficByEmail(email)
+		if err != nil || traffic == nil {
+			continue
+		}
+
+		limit, ok := inboundLimits[traffic.InboundId]
+		if !ok || limit <= 0 {
+			continue
+		}
+
+		isBanned := ClientStatus[email]
+		activeIPCount := len(ips)
+
+		if activeIPCount > limit && !isBanned {
+			tag, tagOk := inboundTags[traffic.InboundId]
+			if tagOk {
+				logger.Infof("设备限制超限: 用户 %s. 限制: %d, 当前活跃: %d. 禁用该用户。", email, limit, activeIPCount)
+				err := xray.GetXrayAPI().RemoveUser(tag, email)
+				if err != nil {
+					logger.Warningf("通过API禁用用户 %s 失败: %v", email, err)
+				} else {
+					ClientStatus[email] = true
+				}
+			}
+		}
+
+		if activeIPCount <= limit && isBanned {
+			_, client, err := j.inboundService.GetClientByEmail(email)
+			if err != nil || client == nil {
+				continue
+			}
+
+			tag, tagOk := inboundTags[traffic.InboundId]
+			if tagOk {
+				logger.Infof("设备数量已恢复: 用户 %s. 限制: %d, 当前活跃: %d. 重新启用该用户。", email, limit, activeIPCount)
+				
+				inbound, err := j.inboundService.GetInbound(traffic.InboundId)
+				if err != nil {
+					continue
+				}
+
+				var clientMap map[string]interface{}
+				clientJson, _ := json.Marshal(client)
+				json.Unmarshal(clientJson, &clientMap)
+				
+				err = xray.GetXrayAPI().AddUser(string(inbound.Protocol), tag, clientMap)
+
+				if err != nil {
+					logger.Warningf("通过API重新启用用户 %s 失败: %v", email, err)
+				} else {
+					delete(ClientStatus, email)
+				}
+			}
+		}
+	}
 }
 
 type CheckClientIpJob struct {
@@ -111,45 +262,40 @@ func (j *CheckClientIpJob) Run() {
 func (j *CheckClientIpJob) clearAccessLog() {
 	logAccessP, err := os.OpenFile(xray.GetAccessPersistentLogPath(), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
 	j.checkError(err)
+	defer logAccessP.Close()
 
 	accessLogPath, err := xray.GetAccessLogPath()
 	j.checkError(err)
 
 	file, err := os.Open(accessLogPath)
 	j.checkError(err)
+	defer file.Close()
 
 	_, err = io.Copy(logAccessP, file)
 	j.checkError(err)
 
-	logAccessP.Close()
-	file.Close()
-
 	err = os.Truncate(accessLogPath, 0)
 	j.checkError(err)
+
 	j.lastClear = time.Now().Unix()
 }
 
 func (j *CheckClientIpJob) hasLimitIp() bool {
 	db := database.GetDB()
-
 	var inbounds []*model.Inbound
+
 	err := db.Model(model.Inbound{}).Find(&inbounds).Error
 	if err != nil {
 		return false
 	}
 
 	for _, inbound := range inbounds {
-		// 新增：入站级设备限制直接激活 job
-		if inbound.DeviceLimit > 0 {
-			return true
-		}
-
 		if inbound.Settings == "" {
 			continue
 		}
 
 		settings := map[string][]model.Client{}
-		_ = json.Unmarshal([]byte(inbound.Settings), &settings)
+		json.Unmarshal([]byte(inbound.Settings), &settings)
 		clients := settings["clients"]
 
 		for _, client := range clients {
@@ -251,10 +397,6 @@ func (j *CheckClientIpJob) checkError(e error) {
 	}
 }
 
-func (j *CheckClientIpJob) contains(s []string, str string) bool {
-	return slices.Contains(s, str)
-}
-
 func (j *CheckClientIpJob) getInboundClientIps(clientEmail string) (*model.InboundClientIps, error) {
 	db := database.GetDB()
 	InboundClientIps := &model.InboundClientIps{}
@@ -330,10 +472,6 @@ func (j *CheckClientIpJob) updateInboundClientIps(inboundClientIps *model.Inboun
 	for _, client := range clients {
 		if client.Email == clientEmail {
 			limitIp := client.LimitIP
-			// 新增：若客户端未设置（0/<=0），且入站设置了设备限制，则回退到入站级
-            if (limitIp <= 0) && (inbound != nil) && (inbound.DeviceLimit > 0) {
-              limitIp = inbound.DeviceLimit
-            }
 
 			if limitIp > 0 && inbound.Enable {
 				shouldCleanLog = true
