@@ -365,7 +365,7 @@ func (s *Server) Start() (err error) {
 			listener = network.NewAutoHttpsListener(listener, func(conn net.Conn) error {
 				clientIP := conn.RemoteAddr().String()
 				// 假设只有一个入站 ID，可以改成实际逻辑获取对应 inboundID
-				inboundID, err := s.settingService.GetInboundID()
+				inboundID := s.settingService.GetInboundID()
 				if err != nil {
 					return err
 				}
