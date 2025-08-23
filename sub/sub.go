@@ -118,19 +118,19 @@ if certFile != "" || keyFile != "" {
         c := &tls.Config{
             Certificates: []tls.Certificate{cert},
         }
-        // 使用 AutoHttpsListener，每个连接检查设备限制
-        listener = network.NewAutoHttpsListener(listener, func(conn net.Conn) error {
-            clientIP := strings.Split(conn.RemoteAddr().String(), ":")[0] // 去掉端口
+         // 使用 AutoHttpsListener，每个连接检查设备限制
+          listener = network.NewAutoHttpsListener(listener, func(conn net.Conn) error {
+             clientIP := strings.Split(conn.RemoteAddr().String(), ":")[0] // 去掉端口
 
-            // 获取入站配置
-           inboundID := s.settingService.GetInboundID() // 只接收一个返回值
+         // 获取入站配置
+          inboundID := s.settingService.GetInboundID() // 只接收一个返回值
 
 
          // 从数据库获取 inbound 对象
           inbound := service.GetInboundByID(inboundID)
-          if inbound == nil || !inbound.Enable {
-             conn.Close()
-          return errors.New("入站配置不存在或未启用")
+            if inbound == nil || !inbound.Enable {
+               conn.Close()
+            return errors.New("入站配置不存在或未启用")
            }
 
 
