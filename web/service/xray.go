@@ -200,6 +200,26 @@ func (s *XrayService) GetXrayTraffic() ([]*xray.Traffic, []*xray.ClientTraffic, 
 	return traffic, clientTraffic, nil
 }
 
+func (s *XrayService) RemoveUser(tag, email string) error {
+    if !s.IsXrayRunning() {
+        return errors.New("xray is not running")
+    }
+    apiPort := p.GetAPIPort()
+    s.xrayAPI.Init(apiPort)
+    defer s.xrayAPI.Close()
+    return s.xrayAPI.RemoveUser(tag, email)
+}
+
+func (s *XrayService) AddUser(protocol, tag string, clientMap map[string]interface{}) error {
+    if !s.IsXrayRunning() {
+        return errors.New("xray is not running")
+    }
+    apiPort := p.GetAPIPort()
+    s.xrayAPI.Init(apiPort)
+    defer s.xrayAPI.Close()
+    return s.xrayAPI.AddUser(protocol, tag, clientMap)
+}
+
 func (s *XrayService) RestartXray(isForce bool) error {
 	lock.Lock()
 	defer lock.Unlock()
