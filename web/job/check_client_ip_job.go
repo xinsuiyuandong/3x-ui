@@ -10,13 +10,14 @@ import (
 	"regexp"
 	"sort"
 	"time"
+	"strings"
 	"sync"
 
 	"x-ui/database"
 	"x-ui/database/model"
 	"x-ui/logger"
 	"x-ui/xray"
-    "x-ui/web/service"
+                 "x-ui/web/service"
 )
 
 // =================================================================
@@ -181,12 +182,7 @@ func (j *CheckDeviceLimitJob) checkAllClientsLimit() {
 			tag, tagOk := inboundTags[traffic.InboundId]
 			if tagOk {
 				logger.Infof("设备限制超限: 用户 %s. 限制: %d, 当前活跃: %d. 禁用该用户。", email, limit, activeIPCount)
-				
-				apiPort := service.P.GetAPIPort() // 使用全局Xray进程获取API端口
-				j.xrayService.XrayAPI.Init(apiPort)
-				err := j.xrayService.XrayAPI.RemoveUser(tag, email)
-				j.xrayService.XrayAPI.Close()
-				
+                err := j.xrayService.RemoveUser(tag, email)
 				if err != nil {
 					logger.Warningf("通过API禁用用户 %s 失败: %v", email, err)
 				} else {
@@ -214,10 +210,7 @@ func (j *CheckDeviceLimitJob) checkAllClientsLimit() {
 				clientJson, _ := json.Marshal(client)
 				json.Unmarshal(clientJson, &clientMap)
 				
-				apiPort := service.P.GetAPIPort()
-				j.xrayService.XrayAPI.Init(apiPort)
-				err = j.xrayService.XrayAPI.AddUser(string(inbound.Protocol), tag, clientMap)
-				j.xrayService.XrayAPI.Close()
+				err = j.xrayService.AddUser(string(inbound.Protocol), tag, clientMap)
 
 				if err != nil {
 					logger.Warningf("通过API重新启用用户 %s 失败: %v", email, err)
