@@ -310,7 +310,6 @@ func (s *Server) startTask() {
 }
 
 func (s *Server) Start() (err error) {
-	// This is an anonymous function, no function name
 	defer func() {
 		if err != nil {
 			s.Stop()
@@ -345,25 +344,36 @@ func (s *Server) Start() (err error) {
 	if err != nil {
 		return err
 	}
+
 	if certFile == "" || keyFile == "" {
-		// 如果没有证书，强制检查 listen 是否内部 IP，否则回退到本地
 		if !isInternalIP(listen) {
 			listen = fallbackToLocalhost(listen)
 		}
 	}
+
 	listenAddr := net.JoinHostPort(listen, strconv.Itoa(port))
 	listener, err := net.Listen("tcp", listenAddr)
 	if err != nil {
 		return err
 	}
-	if certFile != "" || keyFile != "" {
+
+	// --- 如果有证书，使用 AutoHttpsListener + TLS，并在 Accept 时处理设备限制 ---
+	if certFile != "" && keyFile != "" {
 		cert, err := tls.LoadX509KeyPair(certFile, keyFile)
 		if err == nil {
-			c := &tls.Config{
+			// 传入处理函数，每次新连接就会检查设备限制
+			listener = network.NewAutoHttpsListener(listener, func(conn net.Conn) error {
+				clientIP := conn.RemoteAddr().String()
+				// 假设只有一个入站 ID，可以改成实际逻辑获取对应 inboundID
+				inboundID, err := s.settingService.GetInboundID()
+				if err != nil {
+					return err
+				}
+				return service.HandleInboundConnection(inboundID, clientIP, conn)
+			})
+			listener = tls.NewListener(listener, &tls.Config{
 				Certificates: []tls.Certificate{cert},
-			}
-			listener = network.NewAutoHttpsListener(listener)
-			listener = tls.NewListener(listener, c)
+			})
 			logger.Info("Web server running HTTPS on", listener.Addr())
 		} else {
 			logger.Error("Error loading certificates:", err)
@@ -372,26 +382,33 @@ func (s *Server) Start() (err error) {
 	} else {
 		logger.Info("Web server running HTTP on", listener.Addr())
 	}
+
 	s.listener = listener
+	s.httpServer = &http.Server{Handler: engine}
 
-	s.httpServer = &http.Server{
-		Handler: engine,
-	}
-
+	// 启动服务
 	go func() {
-		s.httpServer.Serve(listener)
+		if err := s.httpServer.Serve(listener); err != nil && err != http.ErrServerClosed {
+			logger.Error("HTTP server error:", err)
+		}
 	}()
 
+	// --- 启动定时任务 ---
 	s.startTask()
 
+	// 启动设备清理 Job（定时释放不活跃 IP）
+	job.StartDeviceCleanupJob()
+
+	// 启动 TgBot
 	isTgbotenabled, err := s.settingService.GetTgbotEnabled()
-	if (err == nil) && (isTgbotenabled) {
+	if err == nil && isTgbotenabled {
 		tgBot := s.tgbotService.NewTgbot()
 		tgBot.Start(i18nFS)
 	}
 
 	return nil
 }
+
 
 func (s *Server) Stop() error {
 	s.cancel()
