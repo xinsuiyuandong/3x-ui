@@ -45,8 +45,8 @@ func (j *DeviceCleanupJob) Run() {
 			continue
 		}
 
-		service.InboundLock.Lock()
-		ipSet, ok := service.InboundActiveIPs[inbound.Id]
+		service.inboundLock.Lock()
+		ipSet, ok := service.inboundActiveIPs[inbound.Id]
 		if ok {
 			for ip := range ipSet {
 				// 可根据业务逻辑判断是否清理，此处简单示例: 保持现有
@@ -54,7 +54,7 @@ func (j *DeviceCleanupJob) Run() {
 				_ = ip
 			}
 		}
-		service.InboundLock.Unlock()
+		service.inboundLock.Unlock()
 	}
 }
 
