@@ -32,6 +32,15 @@ var (
 	InboundActiveIPs = make(map[int]map[string]bool) // inboundID -> { clientIP: true }
 )
 
+// GetInboundByID 从数据库获取 inbound
+func GetInboundByID(id int) *model.Inbound {
+    var inbound model.Inbound
+    if err := database.GetDB().Where("id = ?", id).First(&inbound).Error; err != nil {
+        return nil
+    }
+    return &inbound
+}
+
 // GetInboundID 返回数据库中第一个启用的入站ID
 func (s *SettingService) GetInboundID() int {
     var inbound model.Inbound
@@ -39,7 +48,7 @@ func (s *SettingService) GetInboundID() int {
         // 没找到启用的入站，返回 0
         return 0
     }
-    return int(inbound.ID)
+    return int(inbound.Id)
 }
 
 // ===============================
