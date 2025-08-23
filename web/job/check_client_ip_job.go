@@ -10,7 +10,6 @@ import (
 	"regexp"
 	"sort"
 	"time"
-	"strings"
 	"sync"
 
 	"x-ui/database"
