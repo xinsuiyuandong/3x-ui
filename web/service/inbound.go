@@ -17,7 +17,6 @@ import (
 	"x-ui/logger"
 	"x-ui/util/common"
 	"x-ui/xray"
-	"x-ui/service" // 🔑 新增：引入 service 包，用于调用设备限制方法
 
 	"gorm.io/gorm"
 )
