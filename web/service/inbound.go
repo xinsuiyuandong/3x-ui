@@ -30,6 +30,15 @@ type InboundService struct {
 var inboundActiveIPs = make(map[int]map[string]bool) // inboundID -> {ipSet}
 var inboundLock sync.Mutex
 
+// GetInboundByID 根据ID获取入站配置
+func GetInboundByID(id int64) (*model.Inbound, error) {
+	var inbound model.Inbound
+	if err := database.DB.First(&inbound, id).Error; err != nil {
+		return nil, err
+	}
+	return &inbound, nil
+}
+
 // ===============================
 // 检查设备数是否超限
 // ===============================
@@ -80,6 +89,8 @@ func ReleaseDevice(inboundID int, ip string) {
 // 入站连接处理示例（只做设备限制检查）
 // ===============================
 func HandleInboundConnection(inboundID int64, clientIP string, conn net.Conn) error {
+	//获取入站配置
+	inbound, err := GetInboundByID(inboundID)
 	if inbound == nil || !inbound.Enable {
 		return errors.New("入站配置不存在或未启用")
 	}
