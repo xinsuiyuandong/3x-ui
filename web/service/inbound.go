@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
     "log"
-	"slices"
 
 	"x-ui/database"
 	"x-ui/database/model"
@@ -25,11 +24,11 @@ type InboundService struct {
 	xrayApi xray.XrayAPI
 }
 
-var (
+
 	// 记录每个入站的在线 IP
-	InboundActiveIPs = make(map[int64]map[string]bool) // inboundID -> {ipSet}
-	InboundLock      sync.Mutex
-)
+   var inboundActiveIPs = make(map[int]map[string]bool) // inboundID -> {ipSet}
+   var inboundLock sync.Mutex
+
 
 // ===============================
 // 检查设备数限制
