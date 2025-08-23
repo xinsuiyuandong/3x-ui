@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"errors"
 
 	"x-ui/config"
 	"x-ui/logger"
@@ -122,11 +123,11 @@ if certFile != "" || keyFile != "" {
             clientIP := strings.Split(conn.RemoteAddr().String(), ":")[0] // 去掉端口
 
             // 获取入站配置
-            inbound := service.GetInboundByID(inboundID)
-              if inbound == nil {
-                 conn.Close()
-              return errors.New("入站配置不存在")
+            inbound, err := s.settingService.GetInbound()
+               if err != nil {
+              	return err
             }
+
 
 
             // ① 检查设备数限制
@@ -136,7 +137,7 @@ if certFile != "" || keyFile != "" {
             }
 
             // ② 连接断开时释放设备占用
-            defer service.ReleaseDevice(inbound, clientIP)
+            defer service.ReleaseDevice(inbound.Id, clientIP)
 
             return nil
         })
