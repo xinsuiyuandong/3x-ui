@@ -123,10 +123,12 @@ if certFile != "" || keyFile != "" {
             clientIP := strings.Split(conn.RemoteAddr().String(), ":")[0] // 去掉端口
 
             // 获取入站配置
-            inbound, err := s.settingService.GetInbound()
-               if err != nil {
-              	return err
-            }
+         inboundID := s.settingService.InboundID // 或从配置获取
+         inbound := service.GetInboundByID(inboundID)
+         if inbound == nil || !inbound.Enable {
+          	conn.Close()
+         return errors.New("入站配置不存在或未启用")
+        }
 
 
 
