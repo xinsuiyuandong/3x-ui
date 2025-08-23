@@ -49,6 +49,14 @@ type wrapAssetsFS struct {
 	embed.FS
 }
 
+func GetInboundByID(id int) *model.Inbound {
+    var inbound model.Inbound
+    if err := database.GetDB().Where("id = ?", id).First(&inbound).Error; err != nil {
+        return nil
+    }
+    return &inbound
+}
+
 func (f *wrapAssetsFS) Open(name string) (fs.File, error) {
 	file, err := f.FS.Open("assets/" + name)
 	if err != nil {
