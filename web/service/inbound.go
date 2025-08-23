@@ -26,7 +26,7 @@ type InboundService struct {
 }
 
 // GetInboundID 获取某个默认入站的ID（临时返回0，避免报错）
-func (s *SettingService) GetInboundID() int64 {
+func (s *SettingService) GetInboundID() int {
     return 0
 }
 
@@ -38,7 +38,7 @@ var (
 )
 
 // GetInboundByID 根据ID获取入站配置
-func GetInboundByID(id int64) *model.Inbound {
+func GetInboundByID(id int) *model.Inbound {
     var inbound model.Inbound
     if err := database.GetDB().Where("id = ?", id).First(&inbound).Error; err != nil {
         return nil
@@ -95,7 +95,7 @@ func ReleaseDevice(inboundID int, ip string) {
 // ===============================
 // 入站连接处理示例（只做设备限制检查）
 // ===============================
-func HandleInboundConnection(inboundID int64, clientIP string, conn net.Conn) error {
+func HandleInboundConnection(inboundID int, clientIP string, conn net.Conn) error {
 	// 获取入站配置
     inbound := GetInboundByID(inboundID)
     if inbound == nil || !inbound.Enable {
