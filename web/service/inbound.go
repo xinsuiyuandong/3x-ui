@@ -34,7 +34,7 @@ func (s *SettingService) GetInboundID() int64 {
 var (
 	// 设备限制全局锁和活动 IP 列表（供 job 使用）
 	inboundLock     sync.Mutex
-	inboundActiveIPs = make(map[int64]map[string]bool) // inboundID -> { clientIP: true }
+	inboundActiveIPs = make(map[int]map[string]bool) // inboundID -> { clientIP: true }
 )
 
 // GetInboundByID 根据ID获取入站配置
