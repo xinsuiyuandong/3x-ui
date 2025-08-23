@@ -25,56 +25,54 @@ type InboundService struct {
 }
 
 
-	// 记录每个入站的在线 IP
-   var inboundActiveIPs = make(map[int]map[string]bool) // inboundID -> {ipSet}
-   var inboundLock sync.Mutex
-
+// 记录每个入站的在线 IP
+var inboundActiveIPs = make(map[int]map[string]bool) // inboundID -> {ipSet}
+var inboundLock sync.Mutex
 
 // ===============================
-// 检查设备数限制
+// 检查设备数是否超限
 // ===============================
 func CheckDeviceLimit(inbound *model.Inbound, ip string) error {
-	if inbound.DeviceLimit <= 0 {
-		return nil // 0 表示不限制
-	}
+    if inbound.DeviceLimit <= 0 {
+        return nil // 不限制
+    }
 
-	InboundLock.Lock()
-	defer InboundLock.Unlock()
+    inboundLock.Lock()
+    defer inboundLock.Unlock()
 
-	ipSet, ok := InboundActiveIPs[inbound.Id]
-	if !ok {
-		ipSet = make(map[string]bool)
-		InboundActiveIPs[inbound.Id] = ipSet
-	}
+    ipSet, ok := inboundActiveIPs[inbound.Id]
+    if !ok {
+        ipSet = make(map[string]bool)
+        inboundActiveIPs[inbound.Id] = ipSet
+    }
 
-	// 已经存在该 IP，允许继续
-	if ipSet[ip] {
-		return nil
-	}
+    // 如果当前 IP 已经存在，允许继续
+    if ipSet[ip] {
+        return nil
+    }
 
-	// 超过限制
-	if len(ipSet) >= inbound.DeviceLimit {
-		return errors.New(fmt.Sprintf(
-			"设备超限: 入站 %d 限制 %d 台，当前已有 %d 台在线",
-			inbound.Id, inbound.DeviceLimit, len(ipSet),
-		))
-	}
+    // 如果超出限制
+    if len(ipSet) >= inbound.DeviceLimit {
+        return errors.New(fmt.Sprintf(
+            "设备超限: 入站 %d 限制 %d 台，当前已有 %d 台在线",
+            inbound.Id, inbound.DeviceLimit, len(ipSet),
+        ))
+    }
 
-	// 添加新 IP
-	ipSet[ip] = true
-	return nil
+    // 添加新 IP
+    ipSet[ip] = true
+    return nil
 }
 
 // ===============================
 // 释放设备占用
 // ===============================
-func ReleaseDevice(inboundID int64, ip string) {
-	InboundLock.Lock()
-	defer InboundLock.Unlock()
-
-	if ipSet, ok := InboundActiveIPs[inboundID]; ok {
-		delete(ipSet, ip)
-	}
+func ReleaseDevice(inboundID int, ip string) {
+    inboundLock.Lock()
+    defer inboundLock.Unlock()
+ if ipSet, ok := inboundActiveIPs[inboundID]; ok {
+        delete(ipSet, ip)
+    }
 }
 
 // ===============================
