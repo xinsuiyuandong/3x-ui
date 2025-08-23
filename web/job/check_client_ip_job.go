@@ -10,14 +10,13 @@ import (
 	"regexp"
 	"sort"
 	"time"
-	"strings"
 	"sync"
 
 	"x-ui/database"
 	"x-ui/database/model"
 	"x-ui/logger"
 	"x-ui/xray"
-                 "x-ui/web/service"
+    "x-ui/web/service"
 )
 
 // =================================================================
