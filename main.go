@@ -24,6 +24,7 @@ import (
 	"github.com/op/go-logging"
 )
 
+// runWebServer 是【设备限制】项目的主执行函数
 func runWebServer() {
 	log.Printf("Starting %v %v", config.GetName(), config.GetVersion())
 
@@ -49,6 +50,9 @@ func runWebServer() {
 		log.Fatalf("Error initializing database: %v", err)
 	}
 
+	// 中文注释: xrayService 在这里被创建，我们需要将它传递给我们的新任务
+	xrayService := service.XrayService{}
+
 	var server *web.Server
 	server = web.NewServer()
 	global.SetWebServer(server)
@@ -66,6 +70,27 @@ func runWebServer() {
 		log.Fatalf("Error starting sub server: %v", err)
 		return
 	}
+
+	// 中文注释: 在面板服务启动后，我们在这里启动设备限制的后台任务
+	go func() {
+		// 中文注释: 等待5秒，确保面板和Xray服务已基本稳定，避免任务启动过早
+		time.Sleep(5 * time.Second)
+
+		// 中文注释: 创建一个定时器。这里的 "10 * time.Second" 就是任务执行的间隔时间。
+		// 您可以修改 10 为 2 或 1，来实现更短的延迟。
+		// 例如: time.NewTicker(2 * time.Second) 就是2秒执行一次。
+		ticker := time.NewTicker(10 * time.Second)
+		defer ticker.Stop()
+
+		// 中文注释: 创建我们的任务实例, 并传入 xrayService
+		checkJob := job.NewCheckDeviceLimitJob(&xrayService)
+
+		// 中文注释: 使用一个无限循环，每次定时器触发，就执行一次任务的 Run() 函数
+		for {
+			<-ticker.C
+			checkJob.Run()
+		}
+	}()
 
 	sigCh := make(chan os.Signal, 1)
 	// Trap shutdown signals
