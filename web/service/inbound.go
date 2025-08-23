@@ -33,7 +33,7 @@ var inboundLock sync.Mutex
 // GetInboundByID 根据ID获取入站配置
 func GetInboundByID(id int64) *model.Inbound {
     var inbound model.Inbound
-    if err := model.DB.Where("id = ?", id).First(&inbound).Error; err != nil {
+    if err := database.GetDB().Where("id = ?", id).First(&inbound).Error; err != nil {
         return nil
     }
     return &inbound
