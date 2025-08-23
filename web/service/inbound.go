@@ -25,6 +25,16 @@ type InboundService struct {
 	xrayApi xray.XrayAPI
 }
 
+type SettingService struct{}
+
+func NewSettingService() *SettingService {
+    return &SettingService{}
+}
+
+// GetInboundID 获取某个默认入站的ID（临时返回0，避免报错）
+func (s *SettingService) GetInboundID() int64 {
+    return 0
+}
 
 // 记录每个入站的在线 IP
 var inboundActiveIPs = make(map[int]map[string]bool) // inboundID -> {ipSet}
