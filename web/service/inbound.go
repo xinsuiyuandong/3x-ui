@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
     "log"
+	"net"
 
 	"x-ui/database"
 	"x-ui/database/model"
@@ -79,7 +80,6 @@ func ReleaseDevice(inboundID int, ip string) {
 // 入站连接处理示例（只做设备限制检查）
 // ===============================
 func HandleInboundConnection(inboundID int64, clientIP string, conn net.Conn) error {
-	inbound := model.GetInboundByID(inboundID)
 	if inbound == nil || !inbound.Enable {
 		return errors.New("入站配置不存在或未启用")
 	}
