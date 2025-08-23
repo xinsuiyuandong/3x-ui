@@ -25,11 +25,6 @@ type InboundService struct {
 	xrayApi xray.XrayAPI
 }
 
-// GetInboundID 获取某个默认入站的ID（临时返回0，避免报错）
-func (s *SettingService) GetInboundID() int {
-    return 0
-}
-
 // 记录每个入站的在线 IP
 var (
 	// 设备限制全局锁和活动 IP 列表（供 job 使用）
@@ -37,13 +32,14 @@ var (
 	InboundActiveIPs = make(map[int]map[string]bool) // inboundID -> { clientIP: true }
 )
 
-// GetInboundByID 根据ID获取入站配置
-func GetInboundByID(id int) *model.Inbound {
+// GetInboundID 返回数据库中第一个启用的入站ID
+func (s *SettingService) GetInboundID() int {
     var inbound model.Inbound
-    if err := database.GetDB().Where("id = ?", id).First(&inbound).Error; err != nil {
-        return nil
+    if err := database.GetDB().Where("enable = ?", true).First(&inbound).Error; err != nil {
+        // 没找到启用的入站，返回 0
+        return 0
     }
-    return &inbound
+    return int(inbound.ID)
 }
 
 // ===============================
