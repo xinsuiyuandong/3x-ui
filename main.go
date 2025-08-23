@@ -13,7 +13,7 @@ import (
 	// 中文注释: 新增了 time 和 x-ui/job 的导入，这是运行定时任务所必需的
 	"time"
 
-	"x-ui/job"
+	"x-ui/web/job"
 	"x-ui/config"
 	"x-ui/database"
 	"x-ui/logger"
