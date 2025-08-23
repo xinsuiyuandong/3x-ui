@@ -23,8 +23,6 @@ import (
 	"x-ui/web/middleware"
 	"x-ui/web/network"
 	"x-ui/web/service"
-	"x-ui/database"
-	"x-ui/database/model"
 
 	"github.com/gin-contrib/gzip"
 	"github.com/gin-contrib/sessions"
@@ -49,14 +47,6 @@ var privateIPv4Nets []*net.IPNet
 
 type wrapAssetsFS struct {
 	embed.FS
-}
-
-func GetInboundByID(id int) *model.Inbound {
-    var inbound model.Inbound
-    if err := database.GetDB().Where("id = ?", id).First(&inbound).Error; err != nil {
-        return nil
-    }
-    return &inbound
 }
 
 func (f *wrapAssetsFS) Open(name string) (fs.File, error) {
