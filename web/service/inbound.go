@@ -23,51 +23,94 @@ type InboundService struct {
 	xrayApi xray.XrayAPI
 }
 
-var inboundActiveIPs = make(map[int]map[string]bool) // inboundID -> {ipSet}
-var inboundLock sync.Mutex
+package service
 
-// 检查设备数是否超限
+import (
+	"errors"
+	"fmt"
+	"log"
+	"net"
+	"sync"
+
+	"x-ui/database/model"
+)
+
+var (
+	// 记录每个入站的在线 IP
+	InboundActiveIPs = make(map[int64]map[string]bool) // inboundID -> {ipSet}
+	InboundLock      sync.Mutex
+)
+
+// ===============================
+// 检查设备数限制
+// ===============================
 func CheckDeviceLimit(inbound *model.Inbound, ip string) error {
-    if inbound.DeviceLimit <= 0 {
-        return nil // 不限制
-    }
+	if inbound.DeviceLimit <= 0 {
+		return nil // 0 表示不限制
+	}
 
-    inboundLock.Lock()
-    defer inboundLock.Unlock()
+	InboundLock.Lock()
+	defer InboundLock.Unlock()
 
-    ipSet, ok := inboundActiveIPs[inbound.Id]
-    if !ok {
-        ipSet = make(map[string]bool)
-        inboundActiveIPs[inbound.Id] = ipSet
-    }
+	ipSet, ok := InboundActiveIPs[inbound.Id]
+	if !ok {
+		ipSet = make(map[string]bool)
+		InboundActiveIPs[inbound.Id] = ipSet
+	}
 
-    // 如果当前 IP 已经存在，允许继续
-    if ipSet[ip] {
-        return nil
-    }
+	// 已经存在该 IP，允许继续
+	if ipSet[ip] {
+		return nil
+	}
 
-    // 如果超出限制
-    if len(ipSet) >= inbound.DeviceLimit {
-        return errors.New(fmt.Sprintf(
-            "设备超限: 入站 %d 限制 %d 台，当前已有 %d 台在线",
-            inbound.Id, inbound.DeviceLimit, len(ipSet),
-        ))
-    }
+	// 超过限制
+	if len(ipSet) >= inbound.DeviceLimit {
+		return errors.New(fmt.Sprintf(
+			"设备超限: 入站 %d 限制 %d 台，当前已有 %d 台在线",
+			inbound.Id, inbound.DeviceLimit, len(ipSet),
+		))
+	}
 
-    // 添加新 IP
-    ipSet[ip] = true
-    return nil
+	// 添加新 IP
+	ipSet[ip] = true
+	return nil
 }
 
-// 连接断开时清理 IP
-func ReleaseDevice(inboundID int, ip string) {
-    inboundLock.Lock()
-    defer inboundLock.Unlock()
+// ===============================
+// 释放设备占用
+// ===============================
+func ReleaseDevice(inboundID int64, ip string) {
+	InboundLock.Lock()
+	defer InboundLock.Unlock()
 
-    if ipSet, ok := inboundActiveIPs[inboundID]; ok {
-        delete(ipSet, ip)
-    }
+	if ipSet, ok := InboundActiveIPs[inboundID]; ok {
+		delete(ipSet, ip)
+	}
 }
+
+// ===============================
+// 入站连接处理示例（只做设备限制检查）
+// ===============================
+func HandleInboundConnection(inboundID int64, clientIP string, conn net.Conn) error {
+	inbound := model.GetInboundByID(inboundID)
+	if inbound == nil || !inbound.Enable {
+		return errors.New("入站配置不存在或未启用")
+	}
+
+	// ① 检查设备数限制
+	if err := CheckDeviceLimit(inbound, clientIP); err != nil {
+		log.Printf("入站 %d: IP %s 被拒绝 -> %s", inbound.Id, clientIP, err.Error())
+		conn.Close()
+		return err
+	}
+
+	// ② 连接断开时释放设备占用
+	defer ReleaseDevice(inbound.Id, clientIP)
+
+	// 不处理实际流量
+	return nil
+}
+
 
 func (s *InboundService) GetInbounds(userId int) ([]*model.Inbound, error) {
 	db := database.GetDB()
