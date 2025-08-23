@@ -31,12 +31,12 @@ var inboundActiveIPs = make(map[int]map[string]bool) // inboundID -> {ipSet}
 var inboundLock sync.Mutex
 
 // GetInboundByID 根据ID获取入站配置
-func GetInboundByID(id int64) (*model.Inbound, error) {
-	var inbound model.Inbound
-	if err := database.DB.First(&inbound, id).Error; err != nil {
-		return nil, err
-	}
-	return &inbound, nil
+func GetInboundByID(id int64) *model.Inbound {
+    var inbound model.Inbound
+    if err := model.DB.Where("id = ?", id).First(&inbound).Error; err != nil {
+        return nil
+    }
+    return &inbound
 }
 
 // ===============================
@@ -89,21 +89,21 @@ func ReleaseDevice(inboundID int, ip string) {
 // 入站连接处理示例（只做设备限制检查）
 // ===============================
 func HandleInboundConnection(inboundID int64, clientIP string, conn net.Conn) error {
-	//获取入站配置
-	inbound, err := GetInboundByID(inboundID)
-	if inbound == nil || !inbound.Enable {
-		return errors.New("入站配置不存在或未启用")
-	}
+	// 获取入站配置
+    inbound := GetInboundByID(inboundID)
+    if inbound == nil || !inbound.Enable {
+        return errors.New("入站配置不存在或未启用")
+    }
 
-	// ① 检查设备数限制
-	if err := CheckDeviceLimit(inbound, clientIP); err != nil {
-		log.Printf("入站 %d: IP %s 被拒绝 -> %s", inbound.Id, clientIP, err.Error())
-		conn.Close()
-		return err
-	}
+    // 检查设备数限制
+    if err := CheckDeviceLimit(inbound, clientIP); err != nil {
+        log.Printf("入站 %d: IP %s 被拒绝 -> %s", inbound.Id, clientIP, err.Error())
+        conn.Close()
+        return err
+    }
 
-	// ② 连接断开时释放设备占用
-	defer ReleaseDevice(inbound.Id, clientIP)
+    // 连接断开时释放设备占用
+    defer ReleaseDevice(inbound.Id, clientIP)
 
 	// 不处理实际流量
 	return nil
