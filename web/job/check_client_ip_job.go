@@ -181,7 +181,7 @@ func (j *CheckDeviceLimitJob) checkAllClientsLimit() {
 			tag, tagOk := inboundTags[traffic.InboundId]
 			if tagOk {
 				logger.Infof("设备限制超限: 用户 %s. 限制: %d, 当前活跃: %d. 禁用该用户。", email, limit, activeIPCount)
-				err := xray.XrayAPI{}.RemoveUser(tag, email)
+				err := xray.GetXrayAPI().RemoveUser(tag, email)
 				if err != nil {
 					logger.Warningf("通过API禁用用户 %s 失败: %v", email, err)
 				} else {
@@ -209,7 +209,7 @@ func (j *CheckDeviceLimitJob) checkAllClientsLimit() {
 				clientJson, _ := json.Marshal(client)
 				json.Unmarshal(clientJson, &clientMap)
 				
-				err = xray.XrayAPI{}.AddUser(string(inbound.Protocol), tag, clientMap)
+				err = xray.GetXrayAPI().AddUser(string(inbound.Protocol), tag, clientMap)
 
 				if err != nil {
 					logger.Warningf("通过API重新启用用户 %s 失败: %v", email, err)
