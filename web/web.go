@@ -363,14 +363,14 @@ func (s *Server) Start() (err error) {
 		if err == nil {
 			// 传入处理函数，每次新连接就会检查设备限制
 			listener = network.NewAutoHttpsListener(listener, func(conn net.Conn) error {
-                inbound := service.GetInboundByID(inboundID)
+                inbound := GetInboundByID(inboundID)
                    if inbound == nil || !inbound.Enable {
                     // 暂时不阻止连接
                     return nil
             }else {
                  clientIP := conn.RemoteAddr().String()
                  // 假设只有一个入站 ID，可以改成实际逻辑获取对应 inboundID
-	                inboundID, err := s.settingService.GetInboundID()
+	                inboundID := s.settingService.GetInboundID()
 		               if err != nil {
 			             return err
 	              }
