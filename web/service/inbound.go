@@ -4,11 +4,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"errors"
-    "sync"
+                 "sync"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
+                 "net"
 
 	"x-ui/database"
 	"x-ui/database/model"
@@ -22,18 +23,6 @@ import (
 type InboundService struct {
 	xrayApi xray.XrayAPI
 }
-
-package service
-
-import (
-	"errors"
-	"fmt"
-	"log"
-	"net"
-	"sync"
-
-	"x-ui/database/model"
-)
 
 var (
 	// 记录每个入站的在线 IP
