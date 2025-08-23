@@ -33,8 +33,8 @@ func (s *SettingService) GetInboundID() int64 {
 // 记录每个入站的在线 IP
 var (
 	// 设备限制全局锁和活动 IP 列表（供 job 使用）
-	inboundLock     sync.Mutex
-	inboundActiveIPs = make(map[int]map[string]bool) // inboundID -> { clientIP: true }
+	InboundLock     sync.Mutex
+	InboundActiveIPs = make(map[int]map[string]bool) // inboundID -> { clientIP: true }
 )
 
 // GetInboundByID 根据ID获取入站配置
@@ -54,13 +54,13 @@ func CheckDeviceLimit(inbound *model.Inbound, ip string) error {
         return nil // 不限制
     }
 
-    inboundLock.Lock()
-    defer inboundLock.Unlock()
+    InboundLock.Lock()
+    defer InboundLock.Unlock()
 
-    ipSet, ok := inboundActiveIPs[inbound.Id]
+    ipSet, ok := InboundActiveIPs[inbound.Id]
     if !ok {
         ipSet = make(map[string]bool)
-        inboundActiveIPs[inbound.Id] = ipSet
+        InboundActiveIPs[inbound.Id] = ipSet
     }
 
     // 如果当前 IP 已经存在，允许继续
@@ -85,9 +85,9 @@ func CheckDeviceLimit(inbound *model.Inbound, ip string) error {
 // 释放设备占用
 // ===============================
 func ReleaseDevice(inboundID int, ip string) {
-    inboundLock.Lock()
-    defer inboundLock.Unlock()
- if ipSet, ok := inboundActiveIPs[inboundID]; ok {
+    InboundLock.Lock()
+    defer InboundLock.Unlock()
+ if ipSet, ok := InboundActiveIPs[inboundID]; ok {
         delete(ipSet, ip)
     }
 }
