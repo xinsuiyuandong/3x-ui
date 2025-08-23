@@ -3,14 +3,10 @@ package service
 import (
 	"encoding/json"
 	"fmt"
-	"errors"
-    "sync"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
-    "log"
-	"net"
 
 	"x-ui/database"
 	"x-ui/database/model"
@@ -24,103 +20,6 @@ import (
 type InboundService struct {
 	xrayApi xray.XrayAPI
 }
-
-// 记录每个入站的在线 IP
-var (
-	// 设备限制全局锁和活动 IP 列表（供 job 使用）
-	InboundLock     sync.Mutex
-	InboundActiveIPs = make(map[int]map[string]bool) // inboundID -> { clientIP: true }
-)
-
-// GetInboundByID 从数据库获取 inbound
-func GetInboundByID(id int) *model.Inbound {
-    var inbound model.Inbound
-    if err := database.GetDB().Where("id = ?", id).First(&inbound).Error; err != nil {
-        return nil
-    }
-    return &inbound
-}
-
-// GetInboundID 返回数据库中第一个启用的入站ID
-func (s *SettingService) GetInboundID() int {
-    var inbound model.Inbound
-    if err := database.GetDB().Where("enable = ?", true).First(&inbound).Error; err != nil {
-        // 没找到启用的入站，返回 0
-        return 0
-    }
-    return int(inbound.Id)
-}
-
-// ===============================
-// 检查设备数是否超限
-// ===============================
-func CheckDeviceLimit(inbound *model.Inbound, ip string) error {
-    if inbound.DeviceLimit <= 0 {
-        return nil // 不限制
-    }
-
-    InboundLock.Lock()
-    defer InboundLock.Unlock()
-
-    ipSet, ok := InboundActiveIPs[inbound.Id]
-    if !ok {
-        ipSet = make(map[string]bool)
-        InboundActiveIPs[inbound.Id] = ipSet
-    }
-
-    // 如果当前 IP 已经存在，允许继续
-    if ipSet[ip] {
-        return nil
-    }
-
-    // 如果超出限制
-    if len(ipSet) >= inbound.DeviceLimit {
-        return errors.New(fmt.Sprintf(
-            "设备超限: 入站 %d 限制 %d 台，当前已有 %d 台在线",
-            inbound.Id, inbound.DeviceLimit, len(ipSet),
-        ))
-    }
-
-    // 添加新 IP
-    ipSet[ip] = true
-    return nil
-}
-
-// ===============================
-// 释放设备占用
-// ===============================
-func ReleaseDevice(inboundID int, ip string) {
-    InboundLock.Lock()
-    defer InboundLock.Unlock()
- if ipSet, ok := InboundActiveIPs[inboundID]; ok {
-        delete(ipSet, ip)
-    }
-}
-
-// ===============================
-// 入站连接处理示例（只做设备限制检查）
-// ===============================
-func HandleInboundConnection(inboundID int, clientIP string, conn net.Conn) error {
-	// 获取入站配置
-    inbound := GetInboundByID(inboundID)
-    if inbound == nil || !inbound.Enable {
-        return errors.New("入站配置不存在或未启用")
-    }
-
-    // 检查设备数限制
-    if err := CheckDeviceLimit(inbound, clientIP); err != nil {
-        log.Printf("入站 %d: IP %s 被拒绝 -> %s", inbound.Id, clientIP, err.Error())
-        conn.Close()
-        return err
-    }
-
-    // 连接断开时释放设备占用
-    defer ReleaseDevice(inbound.Id, clientIP)
-
-	// 不处理实际流量
-	return nil
-}
-
 
 func (s *InboundService) GetInbounds(userId int) ([]*model.Inbound, error) {
 	db := database.GetDB()
@@ -278,15 +177,16 @@ func (s *InboundService) AddInbound(inbound *model.Inbound) (*model.Inbound, boo
 
 	// Secure client ID
 	for _, client := range clients {
-		if inbound.Protocol == "trojan" {
+		switch inbound.Protocol {
+		case "trojan":
 			if client.Password == "" {
 				return inbound, false, common.NewError("empty client ID")
 			}
-		} else if inbound.Protocol == "shadowsocks" {
+		case "shadowsocks":
 			if client.Email == "" {
 				return inbound, false, common.NewError("empty client ID")
 			}
-		} else {
+		default:
 			if client.ID == "" {
 				return inbound, false, common.NewError("empty client ID")
 			}
@@ -426,8 +326,8 @@ func (s *InboundService) UpdateInbound(inbound *model.Inbound) (*model.Inbound, 
 	oldInbound.Remark = inbound.Remark
 	oldInbound.Enable = inbound.Enable
 	oldInbound.ExpiryTime = inbound.ExpiryTime
-	 // 新增这一行
-    oldInbound.DeviceLimit = inbound.DeviceLimit
+                 // 中文注释：确保在更新数据时，将前端传来的 deviceLimit 值赋给从数据库中读出的旧对象。
+	oldInbound.DeviceLimit = inbound.DeviceLimit
 	oldInbound.Listen = inbound.Listen
 	oldInbound.Port = inbound.Port
 	oldInbound.Protocol = inbound.Protocol
@@ -539,15 +439,16 @@ func (s *InboundService) AddInboundClient(data *model.Inbound) (bool, error) {
 
 	// Secure client ID
 	for _, client := range clients {
-		if oldInbound.Protocol == "trojan" {
+		switch oldInbound.Protocol {
+		case "trojan":
 			if client.Password == "" {
 				return false, common.NewError("empty client ID")
 			}
-		} else if oldInbound.Protocol == "shadowsocks" {
+		case "shadowsocks":
 			if client.Email == "" {
 				return false, common.NewError("empty client ID")
 			}
-		} else {
+		default:
 			if client.ID == "" {
 				return false, common.NewError("empty client ID")
 			}
@@ -734,13 +635,14 @@ func (s *InboundService) UpdateInboundClient(data *model.Inbound, clientId strin
 	clientIndex := -1
 	for index, oldClient := range oldClients {
 		oldClientId := ""
-		if oldInbound.Protocol == "trojan" {
+		switch oldInbound.Protocol {
+		case "trojan":
 			oldClientId = oldClient.Password
 			newClientId = clients[0].Password
-		} else if oldInbound.Protocol == "shadowsocks" {
+		case "shadowsocks":
 			oldClientId = oldClient.Email
 			newClientId = clients[0].Email
-		} else {
+		default:
 			oldClientId = oldClient.ID
 			newClientId = clients[0].ID
 		}
@@ -1347,11 +1249,12 @@ func (s *InboundService) SetClientTelegramUserID(trafficId int, tgId int64) (boo
 
 	for _, oldClient := range oldClients {
 		if oldClient.Email == clientEmail {
-			if inbound.Protocol == "trojan" {
+			switch inbound.Protocol {
+			case "trojan":
 				clientId = oldClient.Password
-			} else if inbound.Protocol == "shadowsocks" {
+			case "shadowsocks":
 				clientId = oldClient.Email
-			} else {
+			default:
 				clientId = oldClient.ID
 			}
 			break
@@ -1431,11 +1334,12 @@ func (s *InboundService) ToggleClientEnableByEmail(clientEmail string) (bool, bo
 
 	for _, oldClient := range oldClients {
 		if oldClient.Email == clientEmail {
-			if inbound.Protocol == "trojan" {
+			switch inbound.Protocol {
+			case "trojan":
 				clientId = oldClient.Password
-			} else if inbound.Protocol == "shadowsocks" {
+			case "shadowsocks":
 				clientId = oldClient.Email
-			} else {
+			default:
 				clientId = oldClient.ID
 			}
 			clientOldEnabled = oldClient.Enable
@@ -1494,11 +1398,12 @@ func (s *InboundService) ResetClientIpLimitByEmail(clientEmail string, count int
 
 	for _, oldClient := range oldClients {
 		if oldClient.Email == clientEmail {
-			if inbound.Protocol == "trojan" {
+			switch inbound.Protocol {
+			case "trojan":
 				clientId = oldClient.Password
-			} else if inbound.Protocol == "shadowsocks" {
+			case "shadowsocks":
 				clientId = oldClient.Email
-			} else {
+			default:
 				clientId = oldClient.ID
 			}
 			break
@@ -1551,11 +1456,12 @@ func (s *InboundService) ResetClientExpiryTimeByEmail(clientEmail string, expiry
 
 	for _, oldClient := range oldClients {
 		if oldClient.Email == clientEmail {
-			if inbound.Protocol == "trojan" {
+			switch inbound.Protocol {
+			case "trojan":
 				clientId = oldClient.Password
-			} else if inbound.Protocol == "shadowsocks" {
+			case "shadowsocks":
 				clientId = oldClient.Email
-			} else {
+			default:
 				clientId = oldClient.ID
 			}
 			break
@@ -1611,11 +1517,12 @@ func (s *InboundService) ResetClientTrafficLimitByEmail(clientEmail string, tota
 
 	for _, oldClient := range oldClients {
 		if oldClient.Email == clientEmail {
-			if inbound.Protocol == "trojan" {
+			switch inbound.Protocol {
+			case "trojan":
 				clientId = oldClient.Password
-			} else if inbound.Protocol == "shadowsocks" {
+			case "shadowsocks":
 				clientId = oldClient.Email
-			} else {
+			default:
 				clientId = oldClient.ID
 			}
 			break
