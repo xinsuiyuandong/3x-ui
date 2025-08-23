@@ -123,11 +123,8 @@ if certFile != "" || keyFile != "" {
             clientIP := strings.Split(conn.RemoteAddr().String(), ":")[0] // 去掉端口
 
             // 获取入站配置
-           inboundID, err := s.settingService.GetInboundID()
-             if err != nil {
-           conn.Close()
-             return err
-        }
+           inboundID := s.settingService.GetInboundID() // 只接收一个返回值
+
 
          // 从数据库获取 inbound 对象
           inbound := service.GetInboundByID(inboundID)
