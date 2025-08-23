@@ -373,21 +373,21 @@ func (s *Server) Start() (err error) {
 		if err == nil {
 			// 传入处理函数，每次新连接就会检查设备限制
 			listener = network.NewAutoHttpsListener(listener, func(conn net.Conn) error {
-                inbound := GetInboundByID(inboundID)
-                   if inbound == nil || !inbound.Enable {
-                    // 暂时不阻止连接
-                    return nil
-            }else {
-                 clientIP := conn.RemoteAddr().String()
-                 // 假设只有一个入站 ID，可以改成实际逻辑获取对应 inboundID
-	                inboundID := s.settingService.GetInboundID()
-		               if err != nil {
-			             return err
-	              }
-                  return service.HandleInboundConnection(inboundID, clientIP, conn)
-               }
+              inboundID := s.settingService.GetInboundID()
+               if inboundID == 0 {
+              // 没有启用的入站，直接放行（避免挡掉后台）
+                 return nil
+             }
 
-			})
+             inbound := service.GetInboundByID(inboundID)
+                if inbound == nil || !inbound.Enable {
+              // 依然放行，避免面板打不开
+                return nil
+            }
+
+          clientIP := conn.RemoteAddr().String()
+        return service.HandleInboundConnection(inboundID, clientIP, conn)
+	})
 			listener = tls.NewListener(listener, &tls.Config{
 				Certificates: []tls.Certificate{cert},
 			})
