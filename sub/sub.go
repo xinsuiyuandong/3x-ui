@@ -7,8 +7,6 @@ import (
 	"net"
 	"net/http"
 	"strconv"
-	"strings"
-	"errors"
 
 	"x-ui/config"
 	"x-ui/logger"
@@ -59,17 +57,60 @@ func (s *Server) initRouter() (*gin.Engine, error) {
 		engine.Use(middleware.DomainValidatorMiddleware(subDomain))
 	}
 
-	LinksPath, _ := s.settingService.GetSubPath()
-	JsonPath, _ := s.settingService.GetSubJsonPath()
-	Encrypt, _ := s.settingService.GetSubEncrypt()
-	ShowInfo, _ := s.settingService.GetSubShowInfo()
-	RemarkModel, _ := s.settingService.GetRemarkModel()
-	SubUpdates, _ := s.settingService.GetSubUpdates()
-	SubJsonFragment, _ := s.settingService.GetSubJsonFragment()
-	SubJsonNoises, _ := s.settingService.GetSubJsonNoises()
-	SubJsonMux, _ := s.settingService.GetSubJsonMux()
-	SubJsonRules, _ := s.settingService.GetSubJsonRules()
-	SubTitle, _ := s.settingService.GetSubTitle()
+	LinksPath, err := s.settingService.GetSubPath()
+	if err != nil {
+		return nil, err
+	}
+
+	JsonPath, err := s.settingService.GetSubJsonPath()
+	if err != nil {
+		return nil, err
+	}
+
+	Encrypt, err := s.settingService.GetSubEncrypt()
+	if err != nil {
+		return nil, err
+	}
+
+	ShowInfo, err := s.settingService.GetSubShowInfo()
+	if err != nil {
+		return nil, err
+	}
+
+	RemarkModel, err := s.settingService.GetRemarkModel()
+	if err != nil {
+		RemarkModel = "-ieo"
+	}
+
+	SubUpdates, err := s.settingService.GetSubUpdates()
+	if err != nil {
+		SubUpdates = "10"
+	}
+
+	SubJsonFragment, err := s.settingService.GetSubJsonFragment()
+	if err != nil {
+		SubJsonFragment = ""
+	}
+
+	SubJsonNoises, err := s.settingService.GetSubJsonNoises()
+	if err != nil {
+		SubJsonNoises = ""
+	}
+
+	SubJsonMux, err := s.settingService.GetSubJsonMux()
+	if err != nil {
+		SubJsonMux = ""
+	}
+
+	SubJsonRules, err := s.settingService.GetSubJsonRules()
+	if err != nil {
+		SubJsonRules = ""
+	}
+
+	SubTitle, err := s.settingService.GetSubTitle()
+	if err != nil {
+		SubTitle = ""
+	}
 
 	g := engine.Group("/")
 
@@ -81,6 +122,7 @@ func (s *Server) initRouter() (*gin.Engine, error) {
 }
 
 func (s *Server) Start() (err error) {
+	// This is an anonymous function, no function name
 	defer func() {
 		if err != nil {
 			s.Stop()
@@ -100,10 +142,22 @@ func (s *Server) Start() (err error) {
 		return err
 	}
 
-	certFile, _ := s.settingService.GetSubCertFile()
-	keyFile, _ := s.settingService.GetSubKeyFile()
-	listen, _ := s.settingService.GetSubListen()
-	port, _ := s.settingService.GetSubPort()
+	certFile, err := s.settingService.GetSubCertFile()
+	if err != nil {
+		return err
+	}
+	keyFile, err := s.settingService.GetSubKeyFile()
+	if err != nil {
+		return err
+	}
+	listen, err := s.settingService.GetSubListen()
+	if err != nil {
+		return err
+	}
+	port, err := s.settingService.GetSubPort()
+	if err != nil {
+		return err
+	}
 
 	listenAddr := net.JoinHostPort(listen, strconv.Itoa(port))
 	listener, err := net.Listen("tcp", listenAddr)
@@ -111,51 +165,22 @@ func (s *Server) Start() (err error) {
 		return err
 	}
 
-	// --- 使用 AutoHttpsListener 处理设备限制 ---
-if certFile != "" || keyFile != "" {
-    cert, err := tls.LoadX509KeyPair(certFile, keyFile)
-    if err == nil {
-        c := &tls.Config{
-            Certificates: []tls.Certificate{cert},
-        }
-         // 使用 AutoHttpsListener，每个连接检查设备限制
-          listener = network.NewAutoHttpsListener(listener, func(conn net.Conn) error {
-             clientIP := strings.Split(conn.RemoteAddr().String(), ":")[0] // 去掉端口
-
-         // 获取入站配置
-          inboundID := s.settingService.GetInboundID() // 只接收一个返回值
-
-
-         // 从数据库获取 inbound 对象
-          inbound := service.GetInboundByID(inboundID)
-            if inbound == nil || !inbound.Enable {
-               conn.Close()
-            return errors.New("入站配置不存在或未启用")
-           }
-
-
-
-            // ① 检查设备数限制
-            if err := service.CheckDeviceLimit(inbound, clientIP); err != nil {
-                conn.Close()
-                return err
-            }
-
-            // ② 连接断开时释放设备占用
-            defer service.ReleaseDevice(inbound.Id, clientIP)
-
-            return nil
-        })
-        listener = tls.NewListener(listener, c)
-        logger.Info("Sub server running HTTPS on", listener.Addr())
-    } else {
-        logger.Error("Error loading certificates:", err)
-        logger.Info("Sub server running HTTP on", listener.Addr())
-    }
-} else {
-    logger.Info("Sub server running HTTP on", listener.Addr())
-}
-
+	if certFile != "" || keyFile != "" {
+		cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+		if err == nil {
+			c := &tls.Config{
+				Certificates: []tls.Certificate{cert},
+			}
+			listener = network.NewAutoHttpsListener(listener)
+			listener = tls.NewListener(listener, c)
+			logger.Info("Sub server running HTTPS on", listener.Addr())
+		} else {
+			logger.Error("Error loading certificates:", err)
+			logger.Info("Sub server running HTTP on", listener.Addr())
+		}
+	} else {
+		logger.Info("Sub server running HTTP on", listener.Addr())
+	}
 	s.listener = listener
 
 	s.httpServer = &http.Server{
@@ -163,9 +188,7 @@ if certFile != "" || keyFile != "" {
 	}
 
 	go func() {
-		if err := s.httpServer.Serve(listener); err != nil && err != http.ErrServerClosed {
-			logger.Error("Sub server error:", err)
-		}
+		s.httpServer.Serve(listener)
 	}()
 
 	return nil
