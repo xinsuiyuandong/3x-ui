@@ -2,8 +2,6 @@ package network
 
 import (
 	"net"
-	"x-ui/web/service"
-	"log"
 )
 
 // AutoHttpsListener 包装 net.Listener，支持每个新连接调用回调
