@@ -26,9 +26,23 @@ type XrayService struct {
 	xrayAPI        xray.XrayAPI
 }
 
+// IsXrayRunning 检查 Xray 是否正在运行
 func (s *XrayService) IsXrayRunning() bool {
 	return p != nil && p.IsRunning()
 }
+
+// 中文注释:
+// 新增 GetApiPort 函数。
+// 这个函数的作用是安全地返回当前 Xray 进程正在监听的 API 端口号。
+// 如果 Xray 没有运行 (p == nil)，则返回 0。
+// 我们的后台任务将调用这个函数来获取端口号。
+func (s *XrayService) GetApiPort() int {
+	if p == nil {
+		return 0
+	}
+	return p.GetAPIPort()
+}
+
 
 func (s *XrayService) GetXrayErr() error {
 	if p == nil {
