@@ -37,6 +37,8 @@ var clientStatusLock sync.RWMutex
 type CheckDeviceLimitJob struct {
 	inboundService service.InboundService
 	xrayService    *service.XrayService
+	// 中文注释: 新增 xrayApi 字段，用于持有 Xray API 客户端实例
+	xrayApi xray.XrayAPI
 	// lastPosition 中文注释: 用于记录上次读取 access.log 的位置，避免重复读取
 	lastPosition int64
 }
@@ -45,6 +47,8 @@ type CheckDeviceLimitJob struct {
 func NewCheckDeviceLimitJob(xrayService *service.XrayService) *CheckDeviceLimitJob {
 	return &CheckDeviceLimitJob{
 		xrayService: xrayService,
+		// 中文注释: 初始化 xrayApi 字段
+		xrayApi: xray.XrayAPI{},
 	}
 }
 
