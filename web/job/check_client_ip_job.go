@@ -151,6 +151,15 @@ func (j *CheckDeviceLimitJob) checkAllClientsLimit() {
 		return
 	}
 
+	// 中文注释: 获取 API 端口。如果端口为0 (说明Xray未完全启动或有问题)，则直接返回
+	apiPort := j.xrayService.GetApiPort()
+	if apiPort == 0 {
+		return
+	}
+	// 中文注释: 使用获取到的端口号初始化 API 客户端
+	j.xrayApi.Init(apiPort)
+	defer j.xrayApi.Close()
+
 	inboundLimits := make(map[int]int)
 	inboundTags := make(map[int]string)
 	for _, inbound := range inbounds {
@@ -181,7 +190,8 @@ func (j *CheckDeviceLimitJob) checkAllClientsLimit() {
 			tag, tagOk := inboundTags[traffic.InboundId]
 			if tagOk {
 				logger.Infof("设备限制超限: 用户 %s. 限制: %d, 当前活跃: %d. 禁用该用户。", email, limit, activeIPCount)
-				err := xray.GetXrayAPI().RemoveUser(tag, email)
+				// 中文注释: 修正 API 调用方式
+				err := j.xrayApi.RemoveUser(tag, email)
 				if err != nil {
 					logger.Warningf("通过API禁用用户 %s 失败: %v", email, err)
 				} else {
@@ -209,7 +219,8 @@ func (j *CheckDeviceLimitJob) checkAllClientsLimit() {
 				clientJson, _ := json.Marshal(client)
 				json.Unmarshal(clientJson, &clientMap)
 				
-				err = xray.GetXrayAPI().AddUser(string(inbound.Protocol), tag, clientMap)
+				// 中文注释: 修正 API 调用方式
+				err = j.xrayApi.AddUser(string(inbound.Protocol), tag, clientMap)
 
 				if err != nil {
 					logger.Warningf("通过API重新启用用户 %s 失败: %v", email, err)
