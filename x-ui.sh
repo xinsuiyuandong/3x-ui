@@ -1270,93 +1270,30 @@ subconverter() {
 echo ""
 echo -e "${green}==============================================="
 echo -e "〔订阅转换〕一键部署"
-echo -e "1. 自动申请 SSL 证书"
-echo -e "2. 自动安装 Docker + Nginx"
-echo -e "3. 自动部署 stilleshan/sub 容器"
-echo -e "4. 自动配置反向代理 + SSL 证书"
-echo -e "5. 自动检测域名解析是否正确"
+echo -e "1. 自动安装/部署Nginx"
+echo -e "2. 自动调用面板的证书"
+echo -e "3. 自动部署sublink服务"
+echo -e "4. 自动配置Nginx反向代理"
+echo -e "5. 可直观在前端页面配置订阅"
 echo -e "作者：〔3X-UI中文优化版〕专属定制"
 echo -e "===============================================${plain}"
 echo ""
+    local existing_cert=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'cert: .+' | awk '{print $2}')
+    local existing_key=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'key: .+' | awk '{print $2}')
 
-# --------- 域名输入 ----------
-read -rp "请输入订阅转换访问域名（例如: sub.xxxxx.com 请务必以sub开头）: " SUB_DOMAIN
-echo ""
-read -rp "请输入订阅后端 API 域名（例如: api.xxxxx.com 请务必以api开头）: " API_DOMAIN
-echo ""
-
-# --------- 检测域名格式 ----------
-domain_regex="^([a-zA-Z0-9][-a-zA-Z0-9]{0,62}\.)+[a-zA-Z]{2,}$"
-if [[ ! $SUB_DOMAIN =~ $domain_regex ]]; then
-    echo -e "${red}错误: 域名格式不正确 → $SUB_DOMAIN${plain}"
-    exit 1
-fi
-if [[ ! $API_DOMAIN =~ $domain_regex ]]; then
-    echo -e "${red}错误: 域名格式不正确 → $API_DOMAIN${plain}"
-    exit 1
-fi
-
-# --------- 获取本机公网 IP ----------
-LOCAL_IP=$(curl -s4m8 ip.p3terx.com -k | sed -n 1p)
-
-# --------- 检测域名解析 ----------
-echo -e "${yellow}正在检测域名解析情况...${plain}"
-SUB_IP=$(dig +short $SUB_DOMAIN | tail -n1)
-echo ""
-API_IP=$(dig +short $API_DOMAIN | tail -n1)
-echo ""
-
-if [[ -z $SUB_IP ]]; then
-    echo -e "${red}错误: 无法解析订阅转换访问域名 $SUB_DOMAIN，请检查 DNS 设置！${plain}"
-    exit 1
-fi
-if [[ -z $API_IP ]]; then
-    echo -e "${red}错误: 无法解析后端 API 域名 $API_DOMAIN，请检查 DNS 设置！${plain}"
-    exit 1
-fi
-if [[ "$SUB_IP" != "$LOCAL_IP" ]]; then
-    echo -e "${red}错误: 域名 $SUB_DOMAIN 解析到 $SUB_IP，但本机 IP 是 $LOCAL_IP${plain}"
-    exit 1
-fi
-if [[ "$API_IP" != "$LOCAL_IP" ]]; then
-    echo -e "${red}错误: 域名 $API_DOMAIN 解析到 $API_IP，但本机 IP 是 $LOCAL_IP${plain}"
-    exit 1
-fi
-echo -e "${green}域名解析检测通过！${plain}"
-echo ""
-echo -e "订阅转换访问域名: ${yellow}https://${SUB_DOMAIN}:8443${plain}"
-echo ""
-echo -e "订阅后端 API 域名: ${yellow}https://${API_DOMAIN}:8443${plain}"
-echo ""
-
-# --------- 安装 acme.sh ----------
-if [ ! -f ~/.acme.sh/acme.sh ]; then
-    echo -e "${yellow}-------------->>>>>>>>acme.sh 未安装，正在安装...${plain}"
-    curl https://get.acme.sh | sh
-    ~/.acme.sh/acme.sh --upgrade --auto-upgrade
+    if [[ -n "$existing_cert" && -n "$existing_key" ]]; then
+    echo -e "${green}面板已安装证书采用SSL保护${plain}"
+    echo ""
+    domain=$(basename "$(dirname "$existing_cert")")
+    echo -e "${green}------------->>>>接下来进行sublink订阅转换服务的安装  ........${plain}"
 else
-    echo -e "${green}检测到 acme.sh 已安装，跳过安装步骤${plain}"
+    echo -e "${red}警告：未找到证书和密钥，面板不安全！${plain}"
+    echo ""
+    echo -e "${green}------->>>>且不能安装sublink订阅转换服务<<<<-------${plain}"
+    echo ""
+    return 1
 fi
 
-# --------- 申请 SSL 证书（standalone 占用 80 端口） ----------
-for domain in $SUB_DOMAIN $API_DOMAIN; do
-    if [ ! -f ~/.acme.sh/${domain}_ecc/${domain}.cer ]; then
-        echo -e "${yellow}-------------->>>>>>>>为域名 $domain 申请 SSL 证书...${plain}"
-        ~/.acme.sh/acme.sh --issue -d "$domain" --standalone --keylength ec-256
-    else
-        echo -e "${green}检测到域名 $domain 已存在证书，跳过申请${plain}"
-    fi
-done
-
-# --------- 安装 Docker ----------
-if ! command -v docker &>/dev/null; then
-    echo -e "${yellow}-------------->>>>>>>>未检测到 Docker，正在安装...${plain}"
-    curl -fsSL https://get.docker.com | bash -s docker
-    systemctl enable docker
-    systemctl start docker
-else
-    echo -e "${green}检测到 Docker 已安装，跳过安装步骤${plain}"
-fi
 
 # --------- 安装 Nginx ----------
 if ! command -v nginx &>/dev/null; then
@@ -1368,55 +1305,31 @@ else
     echo -e "${green}检测到 Nginx 已安装，跳过安装步骤${plain}"
 fi
 
-# --------- 部署证书到 Nginx ----------
+# --------- 拷贝3X-UI已有证书到 Nginx ----------
 mkdir -p /etc/nginx/ssl
-for domain in $SUB_DOMAIN $API_DOMAIN; do
-    ~/.acme.sh/acme.sh --install-cert -d "$domain" --ecc \
-        --key-file /etc/nginx/ssl/${domain}.key \
-        --fullchain-file /etc/nginx/ssl/${domain}.crt \
-        --reloadcmd "systemctl reload nginx"
-done
+acme_path="/root/.acme.sh/${domain}_ecc"
+
+cp "${acme_path}/fullchain.cer" "/etc/nginx/ssl/${domain}.cer"
+cp "${acme_path}/${domain}.key" "/etc/nginx/ssl/${domain}.key"
+
+# 重载 nginx，让新证书生效
+systemctl reload nginx
 
 # --------- 配置 Nginx 反向代理 ----------
-NGINX_CONF="/etc/nginx/conf.d/subconverter.conf"
+NGINX_CONF="/etc/nginx/conf.d/sublink.conf"
 cat > $NGINX_CONF <<EOF
 server {
-    listen 8080;
-    server_name $SUB_DOMAIN $API_DOMAIN;
-    return 301 https://\$host:8443\$request_uri;
-}
+    listen 15268 ssl http2;
+    server_name ${domain};
 
-# Web 界面：sub 域名 -> 容器 18080
-server {
-    listen 8443 ssl http2;
-    server_name $SUB_DOMAIN;
+    # 证书路径（从 acme.sh 复制到 /etc/nginx/ssl/ 下）
+    ssl_certificate     /etc/nginx/ssl/${domain}.cer;
+    ssl_certificate_key /etc/nginx/ssl/${domain}.key;
 
-    ssl_certificate /etc/nginx/ssl/${SUB_DOMAIN}.crt;
-    ssl_certificate_key /etc/nginx/ssl/${SUB_DOMAIN}.key;
     ssl_protocols TLSv1.2 TLSv1.3;
 
     location / {
-        proxy_pass http://127.0.0.1:18080/;   # 末尾加 / 更稳妥
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade \$http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host \$host;
-        proxy_set_header X-Real-IP \$remote_addr;
-        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
-    }
-}
-
-# API：api 域名 -> 容器 25500
-server {
-    listen 8443 ssl http2;
-    server_name $API_DOMAIN;
-
-    ssl_certificate /etc/nginx/ssl/${API_DOMAIN}.crt;
-    ssl_certificate_key /etc/nginx/ssl/${API_DOMAIN}.key;
-    ssl_protocols TLSv1.2 TLSv1.3;
-
-    location / {
-        proxy_pass http://127.0.0.1:25500/;   # 关键：走到后端服务
+        proxy_pass http://127.0.0.1:15268;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection "upgrade";
@@ -1427,44 +1340,21 @@ server {
 }
 EOF
 
-# --------- 检查并重启 Nginx ----------
-nginx -t && systemctl restart nginx
+# --------- 安装/部署sublink服务 ----------
 
-# ================================
-# 【新增】为后端创建独立的配置文件
-# ================================
-mkdir -p /opt/sub/conf
-cat > /opt/sub/conf/config.yml <<EOF
-listen: 0.0.0.0:25500
-api_access: true
-EOF
+bash <(curl -Ls https://raw.githubusercontent.com/gooaclok819/sublinkX/main/install.sh)
 
-# --------- 启动 Docker 容器 ----------
-docker rm -f sub >/dev/null 2>&1
-
-docker run -d --name sub --restart always \
-  -p 18080:80 \
-  -p 25500:25500 \
-  -e SITE_NAME="sub" \
-  -e API_URL="https://${API_DOMAIN}:8443" \
-  -v /opt/sub/conf/config.yml:/base/config.yml \
-  stilleshan/sub:latest
-
-# 【重要】开放防火墙端口
+# --------- 开放防火墙端口 ----------
 echo ""
-echo -e "${yellow}请务必手动放行 8080 和 8443 端口，以及 18080 和 25500 端口！！${plain}"
+echo -e "${yellow}请务必手动放行 15268 端口！！${plain}"
 echo ""
 
 # --------- 完成提示 ----------
 echo ""
 echo -e "${green}【订阅转换模块】安装完成！！！${plain}"
 echo ""
-echo -e "${green}Web 界面访问地址：https://${SUB_DOMAIN}:8443${plain}"
+echo -e "${green}Web 界面访问地址：https://${domain}:15268${plain}"
 echo ""
-echo -e "${green}后端 API 拉取地址：https://${API_DOMAIN}:8443${plain}"
-echo ""
-echo -e "${green}PS：即使 VPS 重启，Docker 容器会自动启动，无需手动操作${plain}"
-
 # --------- 返回菜单 ----------
 show_menu
 }
