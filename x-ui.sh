@@ -1296,6 +1296,37 @@ else
 fi
 
 
+# --------- 【订阅转换】模块 ---------- 
+subconverter() {
+echo ""
+echo -e "${green}==============================================="
+echo -e "〔订阅转换〕一键部署"
+echo -e "1. 自动安装/部署Nginx"
+echo -e "2. 自动调用面板的证书"
+echo -e "3. 自动部署sublink服务"
+echo -e "4. 自动配置Nginx反向代理"
+echo -e "5. 可直观在前端页面配置订阅"
+echo -e "作者：〔3X-UI中文优化版〕专属定制"
+echo -e "===============================================${plain}"
+echo ""
+    local existing_cert=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'cert: .+' | awk '{print $2}')
+    local existing_key=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'key: .+' | awk '{print $2}')
+
+    if [[ -n "$existing_cert" && -n "$existing_key" ]]; then
+    echo -e "${green}面板已安装证书采用SSL保护${plain}"
+    echo ""
+    domain=$(basename "$(dirname "$existing_cert")")
+    echo -e "${green}------------->>>>接下来进行sublink订阅转换服务的安装  ........${plain}"
+else
+    echo -e "${red}警告：未找到证书和密钥，面板不安全！${plain}"
+    echo ""
+    echo -e "${green}------->>>>且不能安装sublink订阅转换服务<<<<-------${plain}"
+    echo ""
+    sleep 5
+    exit 1
+fi
+
+
 # --------- 安装 Nginx ----------
 if ! command -v nginx &>/dev/null; then
     echo -e "${yellow}-------------->>>>>>>>未检测到 Nginx，正在安装...${plain}"
@@ -1310,7 +1341,7 @@ fi
 mkdir -p /etc/nginx/ssl
 acme_path="/root/.acme.sh/${domain}_ecc"
 
-cp "${acme_path}/${domain}.cer" "/etc/nginx/ssl/${domain}.cer"
+cp "${acme_path}/fullchain.cer" "/etc/nginx/ssl/${domain}.cer"
 cp "${acme_path}/${domain}.key" "/etc/nginx/ssl/${domain}.key"
 
 # 重载 nginx，让新证书生效
@@ -1330,7 +1361,7 @@ server {
     ssl_protocols TLSv1.2 TLSv1.3;
 
     location / {
-        proxy_pass http://127.0.0.1:15268;
+        proxy_pass http://127.0.0.1:8000;
         proxy_http_version 1.1;
         proxy_set_header Upgrade \$http_upgrade;
         proxy_set_header Connection "upgrade";
@@ -1347,7 +1378,7 @@ bash <(curl -Ls https://raw.githubusercontent.com/xeefei/sublink/main/install.sh
 
 # --------- 开放防火墙端口 ----------
 echo ""
-echo -e "${yellow}请务必手动放行 15268 端口！！${plain}"
+echo -e "${yellow}请务必手动放行${plain} ${red} 8000 和 15268 ${yellow}端口！！${plain}"
 echo ""
 
 # --------- 完成提示 ----------
