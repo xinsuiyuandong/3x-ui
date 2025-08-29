@@ -1297,6 +1297,10 @@ else
     exit 1
 fi
 
+# --------- 安装/部署sublink服务 ----------
+
+bash <(curl -Ls https://raw.githubusercontent.com/xeefei/sublink/main/install.sh)
+
 
 # --------- 安装 Nginx ----------
 if ! command -v nginx &>/dev/null; then
@@ -1342,10 +1346,6 @@ server {
     }
 }
 EOF
-
-# --------- 安装/部署sublink服务 ----------
-
-bash <(curl -Ls https://raw.githubusercontent.com/xeefei/sublink/main/install.sh)
 
 # --------- 开放防火墙端口 ----------
 echo ""
