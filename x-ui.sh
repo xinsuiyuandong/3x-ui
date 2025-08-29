@@ -1358,9 +1358,9 @@ echo -e "${green}【订阅转换模块】安装完成！！！${plain}"
 echo ""
 echo -e "${green}Web 界面访问地址：https://${domain}:15268${plain}"
 echo ""
-echo -e "${green}若要登录前端网页使用【订阅转换】，请直接复制${plain}"
+echo -e "${green}若要登录前端网页使用【订阅转换】，请直接复制以上地址${plain}"
 echo ""
-echo -e "${green}接下来会进入〔3X-UI中文优化版〕x-ui 菜单项${plain}"
+echo -e "${green}接下来流程会进入〔3X-UI中文优化版〕x-ui 菜单项${plain}"
 sleep 8
 echo ""
 # --------- 返回菜单 ----------
