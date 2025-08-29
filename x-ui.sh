@@ -1317,6 +1317,7 @@ echo ""
     echo ""
     domain=$(basename "$(dirname "$existing_cert")")
     echo -e "${green}------------->>>>接下来进行sublink订阅转换服务的安装  ........${plain}"
+    echo ""
 else
     echo -e "${red}警告：未找到证书和密钥，面板不安全！${plain}"
     echo ""
