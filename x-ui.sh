@@ -1291,7 +1291,8 @@ else
     echo ""
     echo -e "${green}------->>>>且不能安装sublink订阅转换服务<<<<-------${plain}"
     echo ""
-    return 1
+    sleep 5
+    exit 1
 fi
 
 
@@ -1342,7 +1343,7 @@ EOF
 
 # --------- 安装/部署sublink服务 ----------
 
-bash <(curl -Ls https://raw.githubusercontent.com/gooaclok819/sublinkX/main/install.sh)
+bash <(curl -Ls https://raw.githubusercontent.com/xeefei/sublink/main/install.sh)
 
 # --------- 开放防火墙端口 ----------
 echo ""
