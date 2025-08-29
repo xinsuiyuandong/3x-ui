@@ -38,7 +38,7 @@ echo -e "——————————————————————"
 echo -e "当前服务器的操作系统为:${red} $release${plain}"
 echo ""
 xui_version=$(/usr/local/x-ui/x-ui -v)
-last_version=$(curl -Ls "https://api.github.com/repos/xinsuiyuandong/3x-ui/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
+last_version=$(curl -Ls "https://api.github.com/repos/xeefei/3x-ui/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
 echo -e "${green}当前代理面板的版本为: ${red}〔3X-UI优化版〕v${xui_version}${plain}"
 echo ""
 echo -e "${yellow}〔3X-UI优化版〕最新版为---------->>> ${last_version}${plain}"
@@ -143,7 +143,7 @@ before_show_menu() {
 }
 
 install() {
-    bash <(curl -Ls https://raw.githubusercontent.com/xinsuiyuandong/3x-ui/main/install.sh)
+    bash <(curl -Ls https://raw.githubusercontent.com/xeefei/3x-ui/main/install.sh)
     if [[ $? == 0 ]]; then
         if [[ $# == 0 ]]; then
             start
@@ -162,7 +162,7 @@ update() {
         fi
         return 0
     fi
-    bash <(curl -Ls https://raw.githubusercontent.com/xinsuiyuandong/3x-ui/main/install.sh)
+    bash <(curl -Ls https://raw.githubusercontent.com/xeefei/3x-ui/main/install.sh)
     if [[ $? == 0 ]]; then
         LOGI "更新完成，面板已自动重启"
         exit 0
@@ -180,7 +180,7 @@ update_menu() {
         return 0
     fi
     
-    wget --no-check-certificate -O /usr/bin/x-ui https://raw.githubusercontent.com/xinsuiyuandong/3x-ui/main/x-ui.sh
+    wget --no-check-certificate -O /usr/bin/x-ui https://raw.githubusercontent.com/xeefei/3x-ui/main/x-ui.sh
     chmod +x /usr/local/x-ui/x-ui.sh
     chmod +x /usr/bin/x-ui
     
@@ -202,7 +202,7 @@ custom_version() {
         exit 1
     fi
 
-    download_link="https://raw.githubusercontent.com/xinsuiyuandong/3x-ui/master/install.sh"
+    download_link="https://raw.githubusercontent.com/xeefei/3x-ui/master/install.sh"
 
     # Use the entered panel version in the download link
     install_command="bash <(curl -Ls $download_link) v$panel_version"
@@ -236,7 +236,7 @@ uninstall() {
     echo ""
     echo -e "卸载成功\n"
     echo "如果您需要再次安装此面板，可以使用以下命令:"
-    echo -e "${green}bash <(curl -Ls https://raw.githubusercontent.com/xinsuiyuandong/3x-ui/master/install.sh)${plain}"
+    echo -e "${green}bash <(curl -Ls https://raw.githubusercontent.com/xeefei/3x-ui/master/install.sh)${plain}"
     echo ""
     # Trap the SIGTERM signal
     trap delete_script SIGTERM
@@ -559,7 +559,7 @@ enable_bbr() {
 }
 
 update_shell() {
-    wget -O /usr/bin/x-ui -N --no-check-certificate https://github.com/xinsuiyuandong/3x-ui/raw/main/x-ui.sh
+    wget -O /usr/bin/x-ui -N --no-check-certificate https://github.com/xeefei/3x-ui/raw/main/x-ui.sh
     if [[ $? != 0 ]]; then
         echo ""
         LOGE "下载脚本失败，请检查机器是否可以连接至 GitHub"
@@ -1270,31 +1270,112 @@ subconverter() {
 echo ""
 echo -e "${green}==============================================="
 echo -e "〔订阅转换〕一键部署"
-echo -e "1. 自动安装/部署Nginx"
-echo -e "2. 自动调用面板的证书"
-echo -e "3. 自动部署sublink服务"
-echo -e "4. 自动配置Nginx反向代理"
-echo -e "5. 可直观在前端页面配置订阅"
+echo -e "1. 自动申请 SSL 证书"
+echo -e "2. 自动安装 Docker + Nginx"
+echo -e "3. 自动部署 stilleshan/sub 容器"
+echo -e "4. 自动配置反向代理 + SSL 证书"
+echo -e "5. 自动检测域名解析是否正确"
 echo -e "作者：〔3X-UI中文优化版〕专属定制"
 echo -e "===============================================${plain}"
 echo ""
-    local existing_cert=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'cert: .+' | awk '{print $2}')
-    local existing_key=$(/usr/local/x-ui/x-ui setting -getCert true | grep -Eo 'key: .+' | awk '{print $2}')
 
-    if [[ -n "$existing_cert" && -n "$existing_key" ]]; then
-    echo -e "${green}面板已安装证书采用SSL保护${plain}"
-    echo ""
-    domain=$(basename "$(dirname "$existing_cert")")
-    echo -e "${green}------------->>>>接下来进行sublink订阅转换服务的安装  ........${plain}"
-else
-    echo -e "${red}警告：未找到证书和密钥，面板不安全！${plain}"
-    echo ""
-    echo -e "${green}------->>>>且不能安装sublink订阅转换服务<<<<-------${plain}"
-    echo ""
-    sleep 5
+# --------- 域名输入 ----------
+read -rp "请输入订阅转换访问域名（例如: sub.xxxxx.com 请务必以sub开头）: " SUB_DOMAIN
+echo ""
+read -rp "请输入订阅后端 API 域名（例如: api.xxxxx.com 请务必以api开头）: " API_DOMAIN
+echo ""
+
+# --------- 检测域名格式 ----------
+domain_regex="^([a-zA-Z0-9][-a-zA-Z0-9]{0,62}\.)+[a-zA-Z]{2,}$"
+if [[ ! $SUB_DOMAIN =~ $domain_regex ]]; then
+    echo -e "${red}错误: 域名格式不正确 → $SUB_DOMAIN${plain}"
+    exit 1
+fi
+if [[ ! $API_DOMAIN =~ $domain_regex ]]; then
+    echo -e "${red}错误: 域名格式不正确 → $API_DOMAIN${plain}"
     exit 1
 fi
 
+# --------- 获取本机公网 IP ----------
+LOCAL_IP=$(curl -s4m8 ip.p3terx.com -k | sed -n 1p)
+
+# --------- 检测域名解析 ----------
+echo -e "${yellow}正在检测域名解析情况...${plain}"
+SUB_IP=$(dig +short $SUB_DOMAIN | tail -n1)
+echo ""
+API_IP=$(dig +short $API_DOMAIN | tail -n1)
+echo ""
+
+if [[ -z $SUB_IP ]]; then
+    echo -e "${red}错误: 无法解析订阅转换访问域名 $SUB_DOMAIN，请检查 DNS 设置！${plain}"
+    exit 1
+fi
+if [[ -z $API_IP ]]; then
+    echo -e "${red}错误: 无法解析后端 API 域名 $API_DOMAIN，请检查 DNS 设置！${plain}"
+    exit 1
+fi
+if [[ "$SUB_IP" != "$LOCAL_IP" ]]; then
+    echo -e "${red}错误: 域名 $SUB_DOMAIN 解析到 $SUB_IP，但本机 IP 是 $LOCAL_IP${plain}"
+    exit 1
+fi
+if [[ "$API_IP" != "$LOCAL_IP" ]]; then
+    echo -e "${red}错误: 域名 $API_DOMAIN 解析到 $API_IP，但本机 IP 是 $LOCAL_IP${plain}"
+    exit 1
+fi
+echo -e "${green}域名解析检测通过！${plain}"
+echo ""
+echo -e "订阅转换访问域名: ${yellow}https://${SUB_DOMAIN}:8443${plain}"
+echo ""
+echo -e "订阅后端 API 域名: ${yellow}https://${API_DOMAIN}:8443${plain}"
+echo ""
+
+# --------- 安装 acme.sh ----------
+if [ ! -f ~/.acme.sh/acme.sh ]; then
+    echo -e "${yellow}-------------->>>>>>>>acme.sh 未安装，正在安装...${plain}"
+    curl https://get.acme.sh | sh
+    ~/.acme.sh/acme.sh --upgrade --auto-upgrade
+else
+    echo -e "${green}检测到 acme.sh 已安装，跳过安装步骤${plain}"
+fi
+
+# --------- 申请 SSL 证书（standalone 占用 80 端口） ----------
+for domain in $SUB_DOMAIN $API_DOMAIN; do
+    if [ ! -f ~/.acme.sh/${domain}_ecc/${domain}.cer ]; then
+        echo -e "${yellow}-------------->>>>>>>>为域名 $domain 申请 SSL 证书...${plain}"
+        ~/.acme.sh/acme.sh --issue -d "$domain" --standalone --keylength ec-256
+    else
+        echo -e "${green}检测到域名 $domain 已存在证书，跳过申请${plain}"
+    fi
+done
+
+# --------- 安装 Docker ----------
+if ! command -v docker &>/dev/null; then
+    echo -e "${yellow}-------------->>>>>>>>未检测到 Docker，正在安装...${plain}"
+    curl -fsSL https://get.docker.com | bash -s docker
+    systemctl enable docker
+    systemctl start docker
+else
+    echo -e "${green}检测到 Docker 已安装，跳过安装步骤${plain}"
+fi
+
+# --------- 安装 Nginx ----------
+if ! command -v nginx &>/dev/null; then
+    echo -e "${yellow}-------------->>>>>>>>未检测到 Nginx，正在安装...${plain}"
+    apt update && apt install -y nginx
+    systemctl enable nginx
+    systemctl start nginx
+else
+    echo -e "${green}检测到 Nginx 已安装，跳过安装步骤${plain}"
+fi
+
+# --------- 部署证书到 Nginx ----------
+mkdir -p /etc/nginx/ssl
+for domain in $SUB_DOMAIN $API_DOMAIN; do
+    ~/.acme.sh/acme.sh --install-cert -d "$domain" --ecc \
+        --key-file /etc/nginx/ssl/${domain}.key \
+        --fullchain-file /etc/nginx/ssl/${domain}.crt \
+        --reloadcmd "systemctl reload nginx"
+done
 
 # --------- 【订阅转换】模块 ---------- 
 subconverter() {
@@ -1795,9 +1876,9 @@ show_menu() {
   ${yellow}请加入〔3X-UI〕中文交流群${plain}
   ${red}https://t.me/XUI_CN ${yellow}截图进行反馈${plain}
   ${green}〔3X-UI〕优化版项目地址${plain}
-  ${yellow}https://github.com/xinsuiyuandong/3x-ui${plain}
+  ${yellow}https://github.com/xeefei/3x-ui${plain}
   ${green}详细〔安装配置〕教程${plain}
-  ${yellow}https://xinsuiyuandong.blogspot.com/2025/07/3x-ui.html${plain}
+  ${yellow}https://xeefei.blogspot.com/2025/07/3x-ui.html${plain}
 ——————————————————————
 
 -------------->>>>>>>赞 助 推 广 区<<<<<<<<-------------------
