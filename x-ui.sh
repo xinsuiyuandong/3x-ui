@@ -1309,7 +1309,7 @@ fi
 mkdir -p /etc/nginx/ssl
 acme_path="/root/.acme.sh/${domain}_ecc"
 
-cp "${acme_path}/fullchain.cer" "/etc/nginx/ssl/${domain}.cer"
+cp "${acme_path}/${domain}.cer" "/etc/nginx/ssl/${domain}.cer"
 cp "${acme_path}/${domain}.key" "/etc/nginx/ssl/${domain}.key"
 
 # 重载 nginx，让新证书生效
