@@ -1286,6 +1286,7 @@ echo ""
     echo ""
     domain=$(basename "$(dirname "$existing_cert")")
     echo -e "${green}------------->>>>接下来进行sublink订阅转换服务的安装  ........${plain}"
+    sleep 3
     echo ""
 else
     echo -e "${red}警告：未找到证书和密钥，面板不安全！${plain}"
@@ -1344,7 +1345,7 @@ EOF
 
 # --------- 安装/部署sublink服务 ----------
 
-bash <(curl -Ls https://raw.githubusercontent.com/xinsuiyuandong/sublink/main/install.sh)
+bash <(curl -Ls https://raw.githubusercontent.com/xeefei/sublink/main/install.sh)
 
 # --------- 开放防火墙端口 ----------
 echo ""
@@ -1356,6 +1357,11 @@ echo ""
 echo -e "${green}【订阅转换模块】安装完成！！！${plain}"
 echo ""
 echo -e "${green}Web 界面访问地址：https://${domain}:15268${plain}"
+echo ""
+echo -e "${green}若要登录前端网页使用【订阅转换】，请直接复制${plain}"
+echo ""
+echo -e "${green}接下来会进入〔3X-UI中文优化版〕x-ui 菜单项${plain}"
+sleep 8
 echo ""
 # --------- 返回菜单 ----------
 show_menu
