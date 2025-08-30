@@ -1347,6 +1347,13 @@ server {
 }
 EOF
 
+# --------- 使用 sed 替换 ExecStart 行，添加启动参数 ----------
+sudo sed -i "/^ExecStart=/ s|$| run --port 8000|" "/etc/systemd/system/sublink.service"
+            # 重新加载 systemd 守护进程
+            sudo systemctl daemon-reload
+            # 重启 sublink 服务
+            sudo systemctl restart sublink
+
 # --------- 开放防火墙端口 ----------
 echo ""
 echo -e "${yellow}请务必手动放行${plain} ${red} 8000 和 15268 ${yellow}端口！！${plain}"
