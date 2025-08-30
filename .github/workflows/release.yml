@@ -19,7 +19,11 @@ on:
       - 'x-ui.service'
 
 jobs:
-  build:
+  # ===============================================================
+  # Linux 平台的构建任务 (这是原有的任务，保持不变)
+  # ===============================================================
+  build-linux:
+    name: Build for Linux
     permissions:
       contents: write
     strategy:
@@ -43,7 +47,7 @@ jobs:
           go-version-file: go.mod
           check-latest: true
 
-      - name: Build 3X-UI
+      - name: Build 3X-UI for Linux
         run: |
           export CGO_ENABLED=1
           export GOOS=linux
@@ -123,7 +127,7 @@ jobs:
           wget -q -O geosite_RU.dat https://github.com/runetfreedom/russia-v2ray-rules-dat/releases/latest/download/geosite.dat
           mv xray xray-linux-${{ matrix.platform }}
           cd ../..
-          
+
       - name: Package
         run: tar -zcvf x-ui-linux-${{ matrix.platform }}.tar.gz x-ui
 
@@ -141,4 +145,118 @@ jobs:
           tag: ${{ github.ref }}
           file: x-ui-linux-${{ matrix.platform }}.tar.gz
           asset_name: x-ui-linux-${{ matrix.platform }}.tar.gz
+          # 如果你希望这是预发布版本，可以此行注释
+          prerelease: true  
+
+  # ===============================================================
+  # 【新增】Windows 平台的构建任务
+  # ===============================================================
+  build-windows:
+    name: Build for Windows
+    permissions:
+      contents: write
+    strategy:
+      matrix:
+        # 〔中文注释〕: 定义需要构建的 Windows CPU 架构，一般 amd64 就够了
+        platform:
+          - amd64
+          - 386
+    # 〔中文注释〕: 指定使用 Windows 最新版的虚拟环境
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          check-latest: true
+
+      - name: Build 3X-UI for Windows
+        # 〔中文注释〕: 使用 PowerShell 执行脚本，更符合 Windows 环境
+        shell: pwsh
+        run: |
+          # 〔中文注释〕: 设置环境变量，GOOS=windows 指定编译目标为 Windows
+          $env:GOOS = "windows"
+          $env:GOARCH = "${{ matrix.platform }}"
+          # 〔中文注释〕: CGO 在 Windows 下通常不需要，设置为 0
+          $env:CGO_ENABLED = "0"
+
+          # 〔中文注释〕: 执行 Go 编译命令。-o 指定输出文件为 .exe 可执行文件
+          go build -ldflags "-w -s" -o x-ui-release.exe -v main.go
+
+          # 〔中文注释〕: 创建用于打包的文件夹
+          mkdir x-ui
+          
+          # 〔中文注释〕: 移动编译好的主程序到文件夹，并重命名为 x-ui.exe
+          Move-Item -Path .\x-ui-release.exe -Destination .\x-ui\x-ui.exe
+
+          # 〔中文注释〕: 创建 bin 目录存放依赖文件
+          mkdir x-ui\bin
+          cd x-ui\bin
+          
+          # 〔中文注释〕: 下载 Windows 版本的 Xray-core 依赖
+          # 注意：这里的 Xray 版本号 (v25.8.3) 我沿用了你 Linux 脚本中的版本，你可以根据需要修改
+          $Xray_URL="https://github.com/XTLS/Xray-core/releases/download/v25.8.3/"
+          if ("${{ matrix.platform }}" -eq "amd64") {
+            # Invoke-WebRequest 是 PowerShell 的下载命令，等同于 wget
+            Invoke-WebRequest -Uri "${Xray_URL}Xray-windows-64.zip" -OutFile "xray.zip"
+          } elseif ("${{ matrix.platform }}" -eq "386") {
+            Invoke-WebRequest -Uri "${Xray_URL}Xray-windows-32.zip" -OutFile "xray.zip"
+          }
+          
+          # 〔中文注释〕: 解压 xray.zip
+          Expand-Archive -Path .\xray.zip -DestinationPath .
+          # 〔中文注释〕: 删除下载的压缩包
+          Remove-Item -Path .\xray.zip
+
+          # 〔中文注释〕: 下载公用的 geo 数据文件，这些文件与平台无关
+          Remove-Item -Path "geoip.dat", "geosite.dat" -ErrorAction SilentlyContinue
+          Invoke-WebRequest -Uri "https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geoip.dat" -OutFile "geoip.dat"
+          Invoke-WebRequest -Uri "https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/geosite.dat" -OutFile "geosite.dat"
+          Invoke-WebRequest -Uri "https://github.com/chocolate4u/Iran-v2ray-rules/releases/latest/download/geoip.dat" -OutFile "geoip_IR.dat"
+          Invoke-WebRequest -Uri "https://github.com/chocolate4u/Iran-v2ray-rules/releases/latest/download/geosite.dat" -OutFile "geosite_IR.dat"
+          Invoke-WebRequest -Uri "https://github.com/runetfreedom/russia-v2ray-rules-dat/releases/latest/download/geoip.dat" -OutFile "geoip_RU.dat"
+          Invoke-WebRequest -Uri "https://github.com/runetfreedom/russia-v2ray-rules-dat/releases/latest/download/geosite.dat" -OutFile "geosite_RU.dat"
+          
+          # 〔中文注释〕: 将解压出的 xray.exe 重命名，以便区分
+          Move-Item -Path .\xray.exe -Destination "xray-windows-${{ matrix.platform }}.exe"
+
+          # 〔中文注释〕: 返回到 x-ui 文件夹的根目录
+          cd ..
+          
+          # ===============================================================
+          # 【新增部分】从仓库复制辅助文件到待打包的 x-ui 目录中
+          # 辅助文件都放在了项目根目录的 windows_files 文件夹下
+          # ===============================================================
+          Copy-Item -Path ..\windows_files\* -Destination . -Recurse
+
+          # 〔中文注释〕: 返回项目根目录
+          cd ..
+
+      - name: Package to Zip
+        # 〔中文注释〕: 使用 PowerShell 命令将 x-ui 文件夹打包成 zip 压缩包
+        shell: pwsh
+        run: |
+          Compress-Archive -Path .\x-ui -DestinationPath "x-ui-windows-${{ matrix.platform }}.zip"
+
+      - name: Upload files to Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          # 〔中文注释〕: 上传的构建产物名称，明确标识为 windows
+          name: x-ui-windows-${{ matrix.platform }}
+          # 〔中文注释〕: 上传的压缩包路径
+          path: ./x-ui-windows-${{ matrix.platform }}.zip
+
+      - name: Upload files to GH release
+        uses: svenstaro/upload-release-action@v2
+        if: github.event_name == 'release' && github.event.action == 'published'
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ github.ref }}
+          # 〔中文注释〕: 指定要上传的文件为 windows 的 zip 包
+          file: x-ui-windows-${{ matrix.platform }}.zip
+          # 〔中文注释〕: 在 Release 页面显示的资产名称
+          asset_name: x-ui-windows-${{ matrix.platform }}.zip
           prerelease: true
