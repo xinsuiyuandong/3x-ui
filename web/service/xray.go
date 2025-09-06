@@ -294,6 +294,14 @@ func (s *XrayService) RestartXray(isForce bool) error {
 		return err
 	}
 
+	// 【新功能】重启时，将完整配置打印到 Debug 日志以供验证
+    configBytes, jsonErr := json.MarshalIndent(xrayConfig, "", "  ")
+    if jsonErr == nil {
+        logger.Debugf("使用新配置重启 Xray：\n%s", string(configBytes))
+    } else {
+        logger.Warning("无法将 Xray 配置编组以进行日志记录：", jsonErr)
+    }
+
 	if s.IsXrayRunning() {
 		if !isForce && p.GetConfig().Equals(xrayConfig) && !isNeedXrayRestart.Load() {
 			logger.Debug("It does not need to restart Xray")
