@@ -154,15 +154,6 @@ func (p *Process) GetConfig() *Config {
 	return p.config
 }
 
-// 【增加】中文注释：为 Process 结构体添加 SetOnlineClients 方法。
-// 这个方法用于从流量统计服务接收最新的在线用户列表，并安全地更新到 Process 实例中。
-// 它使用“写锁”（Lock），确保同一时间只有一个程序能写入数据，防止冲突。
-func (p *Process) SetOnlineClients(clients []string) {
-	p.mutex.Lock()
-	defer p.mutex.Unlock()
-	p.onlineClients = clients
-}
-
 // 【增加】中文注释：为 Process 结构体添加 GetOnlineClients 方法。
 // 这个方法用于安全地读取并返回当前在线的用户列表。
 // 它使用“读锁”（RLock），允许多个程序同时读取数据以提高性能，同时防止在读取时数据被意外修改。
@@ -175,6 +166,14 @@ func (p *Process) GetOnlineClients() []string {
 	return clientsCopy
 }
 
+// 【增加】中文注释：为 Process 结构体添加 SetOnlineClients 方法。
+// 这个方法用于从流量统计服务接收最新的在线用户列表，并安全地更新到 Process 实例中。
+// 它使用“写锁”（Lock），确保同一时间只有一个程序能写入数据，防止冲突。
+func (p *Process) SetOnlineClients(clients []string) {
+	p.mutex.Lock()
+	defer p.mutex.Unlock()
+	p.onlineClients = clients
+}
 
 func (p *Process) GetUptime() uint64 {
 	return uint64(time.Since(p.startTime).Seconds())
