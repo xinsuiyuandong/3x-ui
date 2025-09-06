@@ -17,8 +17,6 @@ import (
 	"gorm.io/gorm"
 )
 
-//  var p *xray.Process
-
 type InboundService struct {
 	xrayApi xray.XrayAPI
 }
