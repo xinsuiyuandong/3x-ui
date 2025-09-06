@@ -18,8 +18,6 @@ import (
 	"x-ui/util/common"
 )
 
-var p *xray.Process
-
 func GetBinaryName() string {
 	return fmt.Sprintf("xray-%s-%s", runtime.GOOS, runtime.GOARCH)
 }
