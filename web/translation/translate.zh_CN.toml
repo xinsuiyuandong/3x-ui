@@ -87,7 +87,8 @@
 
 [pages.login]
 "hello" = "你好"
-"title" = "欢迎"
+"XPanelSystem" = "X-Panel 面板系统"
+"title" = "欢迎使用"
 "loginAgain" = "登录时效已过，请重新登录"
 
 [pages.login.toasts]
