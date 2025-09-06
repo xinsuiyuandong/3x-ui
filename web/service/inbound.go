@@ -1014,7 +1014,10 @@ func (s *InboundService) addClientTraffic(tx *gorm.DB, traffics []*xray.ClientTr
 	}
 
 	// Set onlineUsers
-	p.SetOnlineClients(onlineClients)
+	// 前端通过 API 查询时获取到最新的在线用户数据。
+	if p != nil {
+		p.SetOnlineClients(onlineClients)
+	}
 
 	err = tx.Save(dbClientTraffics).Error
 	if err != nil {
