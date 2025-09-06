@@ -861,6 +861,8 @@
             async getOnlineUsers() {
                 const msg = await HttpUtil.post('/panel/inbound/onlines');
                 if (!msg.success) {
+				   // 【可选优化】如果获取失败，可以清空旧数据，避免显示错误的状态
+                    this.onlineClients = [];
                     return;
                 }
                 this.onlineClients = msg.obj != null ? msg.obj : [];
